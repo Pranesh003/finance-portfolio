@@ -11,7 +11,8 @@ import {
   RefreshCw,
   Sparkles,
   Calendar,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Zap
 } from 'lucide-react';
 
 interface DashboardHeaderProps {
@@ -20,6 +21,7 @@ interface DashboardHeaderProps {
   onOpenQuickAdd: () => void;
   onOpenCustomize: () => void;
   onOpenCasImport?: () => void;
+  onOpenBrokerSync?: () => void;
   onRefresh: () => void;
   isLoading?: boolean;
 }
@@ -41,6 +43,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   onOpenQuickAdd,
   onOpenCustomize,
   onOpenCasImport,
+  onOpenBrokerSync,
   onRefresh,
   isLoading = false
 }) => {
@@ -165,6 +168,23 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               }}
             >
               Import Demat CAS
+            </Button>
+          )}
+
+          {onOpenBrokerSync && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onOpenBrokerSync}
+              leftIcon={<Zap size={15} />}
+              title="Direct sync from Angel One, Zerodha, and MFCentral"
+              style={{
+                border: '1px solid #3B82F6',
+                color: '#3B82F6',
+                fontWeight: 600
+              }}
+            >
+              Broker Sync
             </Button>
           )}
 

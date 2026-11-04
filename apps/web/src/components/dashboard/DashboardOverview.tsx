@@ -37,6 +37,7 @@ import { FinancialInsightsWidget } from './FinancialInsightsWidget';
 import { QuickAddModal } from './QuickAddModal';
 import { DashboardCustomizerModal } from './DashboardCustomizerModal';
 import { CasImportModal } from '../investments/CasImportModal';
+import { BrokerSyncModal } from '../investments/BrokerSyncModal';
 import { Button } from '../ui/Button';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
@@ -89,6 +90,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
   const [isCasModalOpen, setIsCasModalOpen] = useState(false);
+  const [isBrokerModalOpen, setIsBrokerModalOpen] = useState(false);
 
   // Loading & Error States
   const [isLoading, setIsLoading] = useState(true);
@@ -384,6 +386,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
         onOpenCustomize={() => setIsCustomizeOpen(true)}
         onOpenCasImport={() => setIsCasModalOpen(true)}
+        onOpenBrokerSync={() => setIsBrokerModalOpen(true)}
         onRefresh={() => fetchDashboardData(true)}
         isLoading={isRefreshing}
       />
@@ -457,6 +460,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
       <CasImportModal
         isOpen={isCasModalOpen}
         onClose={() => setIsCasModalOpen(false)}
+        onSuccess={() => fetchDashboardData(true)}
+      />
+
+      {/* Direct Broker & MFCentral Auto-Sync Modal */}
+      <BrokerSyncModal
+        isOpen={isBrokerModalOpen}
+        onClose={() => setIsBrokerModalOpen(false)}
         onSuccess={() => fetchDashboardData(true)}
       />
     </div>

@@ -311,6 +311,21 @@ export class FinanceApiClient {
       this.request<CasImportResult>('/api/v1/investments/cas/commit', {
         method: 'POST',
         body: JSON.stringify({ items })
+      }),
+    syncAngelOne: (payload: { clientCode?: string; apiKey?: string; passwordOrMpin?: string; totp?: string; isDemo?: boolean }) =>
+      this.request<any>('/api/v1/investments/brokers/angel-one/sync', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+    syncZerodha: (payload: { apiKey?: string; accessToken?: string; isDemo?: boolean }) =>
+      this.request<any>('/api/v1/investments/brokers/zerodha/sync', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+    syncMfCentral: (payload: { pan?: string; mobile?: string; casDataJson?: string; isDemo?: boolean }) =>
+      this.request<any>('/api/v1/investments/brokers/mf-central/sync', {
+        method: 'POST',
+        body: JSON.stringify(payload)
       })
   };
 

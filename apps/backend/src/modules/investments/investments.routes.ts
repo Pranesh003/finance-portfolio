@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { investmentsService } from './investments.service';
 import { casParserService } from './cas-parser.service';
+import { brokerSyncService } from './broker-sync.service';
 import { ApiResponse, CasImportResult } from '@finance/types';
 import { optionalAuthenticate } from '../../core/middleware/authenticate';
 import { prisma } from '../../core/database/prisma';
@@ -254,6 +255,59 @@ router.post('/cas/commit', async (req: Request, res: Response, next: NextFunctio
       timestamp: new Date().toISOString()
     };
     res.status(201).json(response);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- DIRECT BROKER & MFCENTRAL SYNC ---
+
+// 1. Angel One (SmartAPI)
+router.post('/brokers/angel-one/sync', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = await getEffectiveUserId(req);
+    const { clientCode, apiKey, passwordOrMpin, totp, isDemo } = req.body;
+    const result = await brokerSyncService.syncAngelOne(userId, { clientCode, apiKey, passwordOrMpin, totp }, !!isDemo);
+    res.json({
+      success: true,
+      message: `Synced ${result.stocksImported} stock holdings directly from Angel One!`,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 2. Zerodha (Kite Connect)
+router.post('/brokers/zerodha/sync', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = await getEffectiveUserId(req);
+    const { apiKey, accessToken, isDemo } = req.body;
+    const result = await brokerSyncService.syncZerodha(userId, { apiKey, accessToken }, !!isDemo);
+    res.json({
+      success: true,
+      message: `Synced ${result.stocksImported} stock holdings directly from Zerodha!`,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 3. MFCentral (All Mutual Funds across AMCs)
+router.post('/brokers/mf-central/sync', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = await getEffectiveUserId(req);
+    const { pan, mobile, casDataJson, isDemo } = req.body;
+    const result = await brokerSyncService.syncMfCentral(userId, { pan, mobile, casDataJson }, !!isDemo);
+    res.json({
+      success: true,
+      message: `Synced ${result.mutualFundsImported} mutual funds directly from MFCentral!`,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
   } catch (err) {
     next(err);
   }

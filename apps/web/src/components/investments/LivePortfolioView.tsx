@@ -4,6 +4,7 @@ import { apiClient } from '../../api';
 import { Button } from '../ui/Button';
 import { AddInvestmentModal } from './AddInvestmentModal';
 import { CasImportModal } from './CasImportModal';
+import { BrokerSyncModal } from './BrokerSyncModal';
 import {
   TrendingUp,
   TrendingDown,
@@ -11,7 +12,8 @@ import {
   RefreshCw,
   Trash2,
   Briefcase,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Zap
 } from 'lucide-react';
 
 export const LivePortfolioView: React.FC = () => {
@@ -20,6 +22,7 @@ export const LivePortfolioView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isCasModalOpen, setIsCasModalOpen] = useState(false);
+  const [isBrokerModalOpen, setIsBrokerModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'STOCKS' | 'MUTUAL_FUNDS' | 'GOLD' | 'CRYPTO'>('ALL');
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -192,6 +195,21 @@ export const LivePortfolioView: React.FC = () => {
           >
             <FileSpreadsheet size={15} />
             Import Demat CAS
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => setIsBrokerModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: '1px solid #3B82F6',
+              color: '#3B82F6',
+              fontWeight: 600
+            }}
+          >
+            <Zap size={15} />
+            Broker & MFCentral Sync
           </Button>
           <Button variant="primary" onClick={() => setIsAddModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Plus size={16} />
@@ -432,6 +450,12 @@ export const LivePortfolioView: React.FC = () => {
       <CasImportModal
         isOpen={isCasModalOpen}
         onClose={() => setIsCasModalOpen(false)}
+        onSuccess={fetchPortfolio}
+      />
+
+      <BrokerSyncModal
+        isOpen={isBrokerModalOpen}
+        onClose={() => setIsBrokerModalOpen(false)}
         onSuccess={fetchPortfolio}
       />
     </div>
