@@ -1,5 +1,6 @@
 # WealthFlow — All-in-One Personal Finance & Wealth Management Platform
 
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Pranesh003%2Ffinance--portfolio-blue?logo=github)](https://github.com/Pranesh003/finance-portfolio)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-22.x-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18-cyan.svg)](https://react.dev/)
@@ -9,6 +10,8 @@
 [![Redis](https://img.shields.io/badge/Redis-7-red.svg)](https://redis.io/)
 
 WealthFlow is a scalable, modular, production-oriented All-in-One Personal Finance Tracker and Wealth Management platform. It is engineered with a clean monorepo architecture powering a **React + Vite Web Frontend**, an **Expo React Native Mobile Application**, and a **Node.js Express + TypeScript Backend API**, backed by **PostgreSQL (Prisma ORM)** and **Redis**.
+
+🔗 **Repository**: [https://github.com/Pranesh003/finance-portfolio.git](https://github.com/Pranesh003/finance-portfolio.git)
 
 ---
 
@@ -98,7 +101,14 @@ wealth-management-monorepo/
 
 ## 🚀 Quick Start Guide
 
-### 1. Installation
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/Pranesh003/finance-portfolio.git
+cd finance-portfolio
+```
+
+### 2. Installation
 
 From the monorepo root:
 
@@ -106,7 +116,7 @@ From the monorepo root:
 npm install
 ```
 
-### 2. Environment Configuration
+### 3. Environment Configuration
 
 Copy the template environment variables:
 
@@ -209,7 +219,68 @@ Pure mathematical financial calculations are decoupled into `@finance/utils`, co
 ## 🔐 Security & Production Architecture
 
 1. **Strict Request Validation**: Every endpoint is validated using Zod schemas via middleware before reaching controllers.
-2. **Authentication Middleware Foundation**: JWT verification with token expiration, refresh token lifecycle, and role-based access control guards (`USER`, `PREMIUM`, `ADVISOR`, `ADMIN`).
+2. **Authentication Middleware Foundation**: JWT verification with token expiration, refresh token lifecycle, and role-based access control guards (`USER`, `PREMIUM`, `ADVISOR`, `ADMIN`, `MEMBER`, `VIEWER`).
 3. **Resilient Redis Cache**: Built-in in-memory fallback layer ensures background routines and caching functions continue to operate even during Redis network partitions.
 4. **Centralized Error Handling**: Standardized `ApiResponse<T>` and `ApiErrorResponse` interfaces prevent stack trace leaks in production.
 5. **Decoupled Placeholder Data**: Realistic mock datasets are strictly categorized and marked with development identifiers (`... (Development Mock)`) to eliminate confusion with production financial data.
+
+---
+
+## 🛡️ Step 03: Authentication & User Management Module
+
+### 1. Workflows & Architecture
+- **Multi-Platform Authentication**: Web (React + Vite) and Mobile (React Native + Expo) support Email/Password, Google OAuth, Apple Sign-In, and 6-digit Mobile OTP.
+- **Regional Experience Defaults**: India preconfigured as the default regional experience (`country: 'India'`, `currency: 'INR'`, fiscal year: `APRIL_MARCH`, time zone: `Asia/Kolkata`).
+- **Security & Token Rotation**:
+  - Bcrypt password hashing (`BCRYPT_SALT_ROUNDS=12`).
+  - Short-lived Access Tokens (15 min) + Rotated Refresh Tokens (7 days).
+  - Cryptographic token reuse detection: replaying a revoked token immediately invalidates all active sessions for the user.
+  - Account Lockout: 5 consecutive failed logins trigger a 15-minute lockout.
+  - IP-based rate limiting on sensitive auth endpoints.
+  - Device/Browser detection via User-Agent parsing.
+  - Platform-secure token persistence: HttpOnly SameSite cookies on Web, SecureStore foundation on Mobile.
+- **Guided Onboarding**: 4-step wizard for workspace selection (`Individual` vs `Household`), module multi-selection, and milestone targets without forcing bank account linkage.
+- **Account Settings & Security**: Active session monitoring with remote device revocation, logout from all devices, danger zone deactivation, and permanent deletion workflows.
+- **Account Recovery**: Dedicated self-service unlock and 24-character master cryptographic recovery screen.
+
+### 2. Integration Credentials Setup (Production)
+
+To connect real third-party authentication and notification providers in production, populate the following in `.env`:
+
+```env
+# Email Provider (Resend or SMTP)
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=re_your_production_api_key
+EMAIL_FROM=security@wealthflow.com
+
+# SMTP Alternative (AWS SES, SendGrid, Mailgun)
+SMTP_HOST=smtp.mailgun.org
+SMTP_PORT=587
+SMTP_USER=postmaster@wealthflow.com
+SMTP_PASS=your_production_smtp_password
+
+# SMS OTP Provider (Twilio)
+SMS_PROVIDER=twilio
+TWILIO_ACCOUNT_SID=AC_your_production_sid
+TWILIO_AUTH_TOKEN=your_production_auth_token
+TWILIO_PHONE_NUMBER=+18005550199
+
+# Google OAuth 2.0
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# Apple Sign-In
+APPLE_CLIENT_ID=com.wealthflow.app
+APPLE_TEAM_ID=your_apple_team_id
+APPLE_KEY_ID=your_apple_key_id
+APPLE_PRIVATE_KEY_PATH=/path/to/AuthKey.p8
+```
+
+### 3. Automated Verification Tests
+
+Run the complete 14-test suite covering registration, duplicate email rejection, token rotation, session revocation, account lockout, rate limiting, and RBAC authorization boundaries:
+
+```bash
+npm run test:auth --workspace=@finance/backend
+```
+

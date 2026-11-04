@@ -20,14 +20,20 @@ declare global {
 }
 
 export function authenticate(req: Request, _res: Response, next: NextFunction): void {
+  let token: string | undefined;
+
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next(new UnauthorizedError('Authentication token missing or invalid'));
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.headers.cookie) {
+    const match = req.headers.cookie.match(/accessToken=([^;]+)/);
+    if (match) {
+      token = match[1];
+    }
   }
 
-  const token = authHeader.split(' ')[1];
   if (!token) {
-    return next(new UnauthorizedError('Authentication token missing'));
+    return next(new UnauthorizedError('Authentication token missing or invalid'));
   }
 
   try {

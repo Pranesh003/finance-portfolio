@@ -35,7 +35,34 @@ const envSchema = z.object({
   ENABLE_REQUEST_LOGGING: z
     .string()
     .transform((val) => val === 'true')
-    .default('true')
+    .default('true'),
+
+  // External Auth & Notification Providers (Optional in dev, with fallback mock)
+  GOOGLE_CLIENT_ID: z.string().optional().default(''),
+  GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
+  APPLE_CLIENT_ID: z.string().optional().default(''),
+  APPLE_TEAM_ID: z.string().optional().default(''),
+  APPLE_KEY_ID: z.string().optional().default(''),
+
+  // Email Notification Credentials
+  SMTP_HOST: z.string().optional().default('localhost'),
+  SMTP_PORT: z.coerce.number().optional().default(587),
+  SMTP_USER: z.string().optional().default(''),
+  SMTP_PASS: z.string().optional().default(''),
+  SMTP_FROM: z.string().default('no-reply@wealthflow.local'),
+
+  // SMS OTP Provider Credentials
+  TWILIO_ACCOUNT_SID: z.string().optional().default(''),
+  TWILIO_AUTH_TOKEN: z.string().optional().default(''),
+  TWILIO_PHONE_NUMBER: z.string().optional().default(''),
+
+  // Cookie Settings
+  COOKIE_DOMAIN: z.string().optional().default(''),
+  COOKIE_SECURE: z
+    .string()
+    .transform((val) => val === 'true')
+    .default('false'),
+  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax')
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -47,4 +74,3 @@ if (!parsed.success) {
 
 export const env = parsed.data;
 export type EnvConfig = typeof env;
-

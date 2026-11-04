@@ -5,6 +5,18 @@ import {
   LoginRequest,
   RegisterRequest,
   AuthTokens,
+  SocialAuthRequest,
+  SendPhoneOtpRequest,
+  VerifyPhoneOtpRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  ChangePasswordRequest,
+  OnboardingRequest,
+  UpdateProfileRequest,
+  User,
+  UserPreferences,
+  SessionDetail,
+  AuditLogEntry,
   FinancialAccount,
   FinancialTransaction,
   InvestmentPortfolio,
@@ -61,7 +73,8 @@ export class FinanceApiClient {
     try {
       const response = await fetch(url, {
         ...options,
-        headers
+        headers,
+        credentials: 'include' // enables HttpOnly cookie exchange
       });
 
       const data = (await response.json()) as ApiResponse<T>;
@@ -89,7 +102,7 @@ export class FinanceApiClient {
     check: () => this.request<HealthCheckResponse>('/api/health')
   };
 
-  // Auth
+  // Auth Module
   public readonly auth = {
     login: (credentials: LoginRequest) =>
       this.request<AuthUserResponse>('/api/v1/auth/login', {
@@ -101,12 +114,98 @@ export class FinanceApiClient {
         method: 'POST',
         body: JSON.stringify(data)
       }),
-    refreshToken: (refreshToken: string) =>
+    socialAuth: (data: SocialAuthRequest) =>
+      this.request<AuthUserResponse>('/api/v1/auth/social', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    sendPhoneOtp: (data: SendPhoneOtpRequest) =>
+      this.request<{ success: boolean; message: string; devOtp?: string }>('/api/v1/auth/phone/send-otp', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    verifyPhoneOtp: (data: VerifyPhoneOtpRequest) =>
+      this.request<AuthUserResponse>('/api/v1/auth/phone/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    forgotPassword: (data: ForgotPasswordRequest) =>
+      this.request<{ success: boolean; message: string; devResetToken?: string }>('/api/v1/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    resetPassword: (data: ResetPasswordRequest) =>
+      this.request<{ success: boolean; message: string }>('/api/v1/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    verifyEmail: (token: string) =>
+      this.request<{ success: boolean; message: string }>('/api/v1/auth/verify-email', {
+        method: 'POST',
+        body: JSON.stringify({ token })
+      }),
+    resendEmailVerification: () =>
+      this.request<{ success: boolean; message: string; devVerifyToken?: string }>('/api/v1/auth/resend-verification', {
+        method: 'POST'
+      }),
+    refreshToken: (refreshToken?: string) =>
       this.request<AuthTokens>('/api/v1/auth/refresh-token', {
         method: 'POST',
         body: JSON.stringify({ refreshToken })
       }),
-    me: () => this.request<AuthUserResponse['user']>('/api/v1/auth/me')
+    logout: (sessionId?: string) =>
+      this.request<{ loggedOut: boolean }>('/api/v1/auth/logout', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId })
+      }),
+    logoutAll: () =>
+      this.request<{ loggedOutAll: boolean }>('/api/v1/auth/logout-all', {
+        method: 'POST'
+      }),
+    me: () => this.request<User>('/api/v1/auth/me')
+  };
+
+  // User Management Module
+  public readonly users = {
+    getProfile: () => this.request<User>('/api/v1/users/profile'),
+    updateProfile: (data: UpdateProfileRequest) =>
+      this.request<User>('/api/v1/users/profile', {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+      }),
+    updatePreferences: (data: Partial<UserPreferences>) =>
+      this.request<User>('/api/v1/users/preferences', {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+      }),
+    submitOnboarding: (data: OnboardingRequest) =>
+      this.request<User>('/api/v1/users/onboarding', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    changePassword: (data: ChangePasswordRequest) =>
+      this.request<{ changed: boolean }>('/api/v1/users/change-password', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    getSessions: () => this.request<SessionDetail[]>('/api/v1/users/sessions'),
+    revokeSession: (id: string) =>
+      this.request<{ revoked: boolean }>(`/api/v1/users/sessions/${id}`, {
+        method: 'DELETE'
+      }),
+    revokeAllOtherSessions: () =>
+      this.request<{ revokedOther: boolean }>('/api/v1/users/sessions', {
+        method: 'DELETE'
+      }),
+    deactivateAccount: () =>
+      this.request<{ deactivated: boolean }>('/api/v1/users/deactivate', {
+        method: 'POST'
+      }),
+    requestAccountDeletion: () =>
+      this.request<{ requested: boolean }>('/api/v1/users/delete-request', {
+        method: 'POST'
+      }),
+    getAuditLogs: () => this.request<AuditLogEntry[]>('/api/v1/users/audit-logs')
   };
 
   // Accounts & Banking
@@ -123,11 +222,7 @@ export class FinanceApiClient {
   // Transactions
   public readonly transactions = {
     list: (params?: PaginationParams) => {
-      const query = params
-        ? `?${new URLSearchParams(
-            Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])
-          ).toString()}`
-        : '';
+      const query = params ? `?page=${params.page}&limit=${params.limit}` : '';
       return this.request<FinancialTransaction[]>(`/api/v1/transactions${query}`);
     },
     create: (data: Partial<FinancialTransaction>) =>
@@ -139,7 +234,7 @@ export class FinanceApiClient {
 
   // Investments
   public readonly investments = {
-    getPortfolios: () => this.request<InvestmentPortfolio[]>('/api/v1/investments/portfolios')
+    listPortfolios: () => this.request<InvestmentPortfolio[]>('/api/v1/investments/portfolios')
   };
 
   // Budgets
@@ -156,4 +251,3 @@ export class FinanceApiClient {
 export function createFinanceApiClient(config: ApiClientConfig): FinanceApiClient {
   return new FinanceApiClient(config);
 }
-

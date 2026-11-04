@@ -12,6 +12,20 @@ enum Role {
   PREMIUM
   ADVISOR
   ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum AuthProviderType {
+  LOCAL
+  GOOGLE
+  APPLE
+  PHONE
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PHONE_OTP
 }
 
 enum KYCStatus {
@@ -217,13 +231,24 @@ model User {
   role            Role        @default(USER)
   isActive        Boolean     @default(true)
   isEmailVerified Boolean     @default(false)
+  isPhoneVerified Boolean     @default(false)
   kycStatus       KYCStatus   @default(UNVERIFIED)
+  onboardingCompleted Boolean @default(false)
+  failedLoginAttempts Int    @default(0)
+  lockoutUntil    DateTime?
+  deactivatedAt   DateTime?
+  deleteRequestedAt DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
   profile         UserProfile?
   preferences     UserPreferences?
   sessions        Session[]
+  authProviders   AuthProvider[]
+  refreshTokens   RefreshToken[]
+  verificationTokens VerificationToken[]
+  passwordResetRequests PasswordResetRequest[]
+  auditLogs       AuditLog[]
   accounts        FinancialAccount[]
   transactions    Transaction[]
   portfolios      Portfolio[]
@@ -249,8 +274,11 @@ model UserProfile {
   phoneNumber String?
   avatarUrl   String?
   dateOfBirth DateTime?
-  country     String?
+  country     String?   @default("India")
   city        String?
+  timeZone    String    @default("Asia/Kolkata")
+  financialYear String  @default("APRIL_MARCH")
+  dateFormat  String    @default("DD/MM/YYYY")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -261,9 +289,14 @@ model UserPreferences {
   id                      String   @id @default(uuid())
   userId                  String   @unique
   user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  defaultCurrency         String   @default("USD")
-  locale                  String   @default("en-US")
-  theme                   String   @default("system")
+  defaultCurrency         String   @default("INR")
+  locale                  String   @default("en-IN")
+  theme                   String   @default("dark")
+  financialYear           String   @default("APRIL_MARCH")
+  workspaceType           String   @default("INDIVIDUAL")
+  enabledModules          String[] @default(["accounts", "transactions", "expenses", "income", "investments", "budgets", "goals"])
+  initialFinancialGoalTitle String?
+  initialFinancialGoalTarget Decimal? @db.Decimal(18, 2)
   enableBiometrics        Boolean  @default(false)
   enablePushNotifications Boolean  @default(true)
   enableEmailAlerts       Boolean  @default(true)
@@ -275,19 +308,102 @@ model UserPreferences {
 }
 
 model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash    String   @unique
+  ipAddress    String?
+  userAgent    String?
+  deviceType   String?
+  deviceName   String?
+  browser      String?
+  os           String?
+  lastActiveAt DateTime @default(now())
+  expiresAt    DateTime
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model AuthProvider {
+  id             String           @id @default(uuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider       AuthProviderType
+  providerUserId String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([userId, provider])
+  @@map("auth_providers")
+}
+
+model RefreshToken {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId           String?
+  session             Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  tokenHash           String   @unique
+  expiresAt           DateTime
+  isRevoked           Boolean  @default(false)
+  replacedByTokenHash String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model VerificationToken {
+  id         String    @id @default(uuid())
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  identifier String
+  tokenHash  String
+  type       TokenType
+  expiresAt  DateTime
+  isUsed     Boolean   @default(false)
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now())
+
+  @@index([identifier, type])
+  @@map("verification_tokens")
+}
+
+model PasswordResetRequest {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokenHash String   @unique
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
   ipAddress String?
   userAgent String?
-  expiresAt DateTime
-  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@index([userId])
-  @@map("sessions")
+  @@map("password_reset_requests")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  status    String   @default("SUCCESS")
+  ipAddress String?
+  userAgent String?
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, action])
+  @@map("audit_logs")
 }
 
 model FinancialAccount {
