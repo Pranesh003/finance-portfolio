@@ -16,7 +16,8 @@
     "build:packages": "npm run build --workspace=@finance/types && npm run build --workspace=@finance/utils && npm run build --workspace=@finance/validation && npm run build --workspace=@finance/ui && npm run build --workspace=@finance/api-client",
     "build:apps": "npm run build --workspace=@finance/backend && npm run build --workspace=@finance/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint \"packages/**/src/**/*.{ts,tsx}\" \"apps/**/src/**/*.{ts,tsx}\"",
+    "test": "node node_modules/tsx/dist/cli.mjs scripts/test-server.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "db:generate": "npm run db:generate --workspace=@finance/backend",
@@ -25,10 +26,12 @@
     "db:seed": "npm run db:seed --workspace=@finance/backend"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.72.1",
+    "@typescript-eslint/parser": "^8.72.1",
     "concurrently": "^9.1.2",
+    "eslint": "^8.57.1",
     "prettier": "^3.5.2",
     "rimraf": "^6.0.1",
     "typescript": "^5.7.3"
   }
 }
-

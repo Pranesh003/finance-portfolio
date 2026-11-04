@@ -24,6 +24,7 @@ import {
 export const App: React.FC = () => {
   const [health, setHealth] = useState<HealthCheckResponse | null>(null);
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,9 +48,38 @@ export const App: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
+      // 1. Check health
       const healthRes = await apiClient.health.check();
       setHealth(healthRes.data);
 
+      // 2. Initialize authenticated session with development demo user if no token exists
+      if (!localStorage.getItem('access_token')) {
+        const loginRes = await apiClient.auth.login({
+          email: 'demo.user@antigravity-finance.local',
+          password: 'Password123!'
+        });
+        if (loginRes.data?.tokens?.accessToken) {
+          localStorage.setItem('access_token', loginRes.data.tokens.accessToken);
+          setCurrentUser(loginRes.data.user.email);
+        }
+      } else {
+        try {
+          const meRes = await apiClient.auth.me();
+          setCurrentUser(meRes.data.email);
+        } catch {
+          // If token expired, re-login
+          const loginRes = await apiClient.auth.login({
+            email: 'demo.user@antigravity-finance.local',
+            password: 'Password123!'
+          });
+          if (loginRes.data?.tokens?.accessToken) {
+            localStorage.setItem('access_token', loginRes.data.tokens.accessToken);
+            setCurrentUser(loginRes.data.user.email);
+          }
+        }
+      }
+
+      // 3. Fetch authenticated accounts
       const accountsRes = await apiClient.accounts.list();
       setAccounts(accountsRes.data);
     } catch (err: unknown) {
@@ -104,25 +134,33 @@ export const App: React.FC = () => {
               </div>
             </div>
           </div>
-          <button
-            onClick={fetchHealthAndAccounts}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: '#1E293B',
-              color: '#F8FAFC',
-              border: '1px solid #334155',
-              padding: '10px 18px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 500,
-              fontSize: '14px'
-            }}
-          >
-            <RefreshCw size={16} />
-            Check Connection
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {currentUser && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#064E3B', border: '1px solid #059669', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', color: '#6EE7B7' }}>
+                <CheckCircle2 size={14} color="#6EE7B7" />
+                <span>Session: {currentUser}</span>
+              </div>
+            )}
+            <button
+              onClick={fetchHealthAndAccounts}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                backgroundColor: '#1E293B',
+                color: '#F8FAFC',
+                border: '1px solid #334155',
+                padding: '10px 18px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 500,
+                fontSize: '14px'
+              }}
+            >
+              <RefreshCw size={16} />
+              Check Connection
+            </button>
+          </div>
         </header>
 
         {/* Development Placeholder Notice */}

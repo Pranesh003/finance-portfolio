@@ -7,6 +7,12 @@ import { transactionsRouter } from '../modules/transactions/transactions.routes'
 import { expensesRouter } from '../modules/expenses/expenses.routes';
 import { incomeRouter } from '../modules/income/income.routes';
 import { investmentsRouter } from '../modules/investments/investments.routes';
+import { stocksRouter } from '../modules/stocks/stocks.routes';
+import { mutualFundsRouter } from '../modules/mutual-funds/mutual-funds.routes';
+import { etfsRouter } from '../modules/etfs/etfs.routes';
+import { bondsRouter } from '../modules/bonds/bonds.routes';
+import { cryptoRouter } from '../modules/crypto/crypto.routes';
+import { preciousMetalsRouter } from '../modules/precious-metals/precious-metals.routes';
 import { assetsRouter } from '../modules/assets/assets.routes';
 import { liabilitiesRouter } from '../modules/liabilities/liabilities.routes';
 import { budgetsRouter } from '../modules/budgets/budgets.routes';
@@ -28,6 +34,12 @@ router.use('/transactions', transactionsRouter);
 router.use('/expenses', expensesRouter);
 router.use('/income', incomeRouter);
 router.use('/investments', investmentsRouter);
+router.use('/stocks', stocksRouter);
+router.use('/mutual-funds', mutualFundsRouter);
+router.use('/etfs', etfsRouter);
+router.use('/bonds', bondsRouter);
+router.use('/crypto', cryptoRouter);
+router.use('/precious-metals', preciousMetalsRouter);
 router.use('/assets', assetsRouter);
 router.use('/liabilities', liabilitiesRouter);
 router.use('/budgets', budgetsRouter);
@@ -40,4 +52,3 @@ router.use('/documents', documentsRouter);
 router.use('/ai', aiRouter);
 
 export const apiRouter = router;
-
