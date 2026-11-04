@@ -1,0 +1,34 @@
+{
+  "name": "wealth-management-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev:backend",
+    "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:web\"",
+    "dev:backend": "npm run dev --workspace=@finance/backend",
+    "dev:web": "npm run dev --workspace=@finance/web",
+    "dev:mobile": "npm run start --workspace=@finance/mobile",
+    "build": "npm run build:packages && npm run build:apps",
+    "build:packages": "npm run build --workspace=@finance/types && npm run build --workspace=@finance/utils && npm run build --workspace=@finance/validation && npm run build --workspace=@finance/ui && npm run build --workspace=@finance/api-client",
+    "build:apps": "npm run build --workspace=@finance/backend && npm run build --workspace=@finance/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "db:generate": "npm run db:generate --workspace=@finance/backend",
+    "db:push": "npm run db:push --workspace=@finance/backend",
+    "db:migrate": "npm run db:migrate --workspace=@finance/backend",
+    "db:seed": "npm run db:seed --workspace=@finance/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "prettier": "^3.5.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.3"
+  }
+}
+

@@ -1,0 +1,43 @@
+import { Router } from 'express';
+import { authRouter } from '../modules/auth/auth.routes';
+import { usersRouter } from '../modules/users/users.routes';
+import { bankingRouter } from '../modules/banking/banking.routes';
+import { accountsRouter } from '../modules/accounts/accounts.routes';
+import { transactionsRouter } from '../modules/transactions/transactions.routes';
+import { expensesRouter } from '../modules/expenses/expenses.routes';
+import { incomeRouter } from '../modules/income/income.routes';
+import { investmentsRouter } from '../modules/investments/investments.routes';
+import { assetsRouter } from '../modules/assets/assets.routes';
+import { liabilitiesRouter } from '../modules/liabilities/liabilities.routes';
+import { budgetsRouter } from '../modules/budgets/budgets.routes';
+import { goalsRouter } from '../modules/goals/goals.routes';
+import { analyticsRouter } from '../modules/analytics/analytics.routes';
+import { reportsRouter } from '../modules/reports/reports.routes';
+import { notificationsRouter } from '../modules/notifications/notifications.routes';
+import { integrationsRouter } from '../modules/integrations/integrations.routes';
+import { documentsRouter } from '../modules/documents/documents.routes';
+import { aiRouter } from '../modules/ai/ai.routes';
+
+const router = Router();
+
+router.use('/auth', authRouter);
+router.use('/users', usersRouter);
+router.use('/banking', bankingRouter);
+router.use('/accounts', accountsRouter);
+router.use('/transactions', transactionsRouter);
+router.use('/expenses', expensesRouter);
+router.use('/income', incomeRouter);
+router.use('/investments', investmentsRouter);
+router.use('/assets', assetsRouter);
+router.use('/liabilities', liabilitiesRouter);
+router.use('/budgets', budgetsRouter);
+router.use('/goals', goalsRouter);
+router.use('/analytics', analyticsRouter);
+router.use('/reports', reportsRouter);
+router.use('/notifications', notificationsRouter);
+router.use('/integrations', integrationsRouter);
+router.use('/documents', documentsRouter);
+router.use('/ai', aiRouter);
+
+export const apiRouter = router;
+

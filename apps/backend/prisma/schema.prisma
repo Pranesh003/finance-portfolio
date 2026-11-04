@@ -1,0 +1,754 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  PREMIUM
+  ADVISOR
+  ADMIN
+}
+
+enum KYCStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  MONEY_MARKET
+  CERTIFICATE_OF_DEPOSIT
+  CREDIT_CARD
+  BROKERAGE
+  RETIREMENT_401K
+  RETIREMENT_IRA
+  ROTH_IRA
+  CRYPTO_WALLET
+  MORTGAGE
+  STUDENT_LOAN
+  AUTO_LOAN
+  PERSONAL_LOAN
+  CASH
+  OTHER_ASSET
+  OTHER_LIABILITY
+}
+
+enum AccountCategory {
+  DEPOSITORY
+  CREDIT
+  INVESTMENT
+  LOAN
+  OTHER
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+  FROZEN
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  INVESTMENT_BUY
+  INVESTMENT_SELL
+  DIVIDEND
+  INTEREST
+  FEE
+  TAX
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  POSTED
+  FAILED
+  RECONCILED
+}
+
+enum RecurringFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+}
+
+enum MetalType {
+  GOLD
+  SILVER
+  PLATINUM
+  PALLADIUM
+}
+
+enum StorageType {
+  PHYSICAL_HOME
+  ALLOCATED_VAULT
+  DIGITAL_ETF
+  SOVEREIGN_BOND
+}
+
+enum WeightUnit {
+  GRAM
+  OUNCE
+  TROY_OUNCE
+  KILOGRAM
+}
+
+enum FixedAssetType {
+  REAL_ESTATE_PRIMARY_RESIDENCE
+  REAL_ESTATE_INVESTMENT
+  VEHICLE
+  ART_COLLECTIBLE
+  JEWELRY
+  PRIVATE_BUSINESS_EQUITY
+  LAND
+  OTHER_PHYSICAL_ASSET
+}
+
+enum LiabilityType {
+  MORTGAGE
+  AUTO_LOAN
+  STUDENT_LOAN
+  PERSONAL_LOAN
+  CREDIT_CARD_DEBT
+  BUSINESS_LOAN
+  TAX_LIABILITY
+  OTHER_DEBT
+}
+
+enum BudgetPeriod {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum GoalCategory {
+  EMERGENCY_FUND
+  RETIREMENT
+  HOME_DOWNPAYMENT
+  VACATION
+  VEHICLE_PURCHASE
+  DEBT_PAYOFF
+  EDUCATION
+  WEDDING
+  WEALTH_MILESTONE
+  CUSTOM
+}
+
+enum GoalPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum GoalStatus {
+  IN_PROGRESS
+  COMPLETED
+  PAUSED
+  ABANDONED
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum IntegrationProvider {
+  PLAID
+  YODLEE
+  SALTEDGE
+  COINBASE
+  BINANCE
+  ALPACA
+  STRIPE
+  CUSTOM_WEBHOOK
+}
+
+enum SyncStatus {
+  HEALTHY
+  SYNCING
+  ACTION_REQUIRED
+  DISCONNECTED
+  ERROR
+}
+
+enum DocumentCategory {
+  BANK_STATEMENT
+  TAX_DOCUMENT
+  INVESTMENT_REPORT
+  INSURANCE_POLICY
+  RECEIPT
+  LOAN_AGREEMENT
+  PROPERTY_DEED
+  OTHER
+}
+
+enum InsightImpact {
+  POSITIVE
+  NEUTRAL
+  WARNING
+  CRITICAL
+}
+
+// ---------------------------------------------------------------------------
+// MODELS
+// ---------------------------------------------------------------------------
+
+model User {
+  id              String      @id @default(uuid())
+  email           String      @unique
+  passwordHash    String
+  role            Role        @default(USER)
+  isActive        Boolean     @default(true)
+  isEmailVerified Boolean     @default(false)
+  kycStatus       KYCStatus   @default(UNVERIFIED)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  profile         UserProfile?
+  preferences     UserPreferences?
+  sessions        Session[]
+  accounts        FinancialAccount[]
+  transactions    Transaction[]
+  portfolios      Portfolio[]
+  assets          FixedAsset[]
+  liabilities     Liability[]
+  budgets         Budget[]
+  goals           FinancialGoal[]
+  notifications   Notification[]
+  integrations    IntegrationConnection[]
+  documents       FinancialDocument[]
+  insights        FinancialInsight[]
+  netWorthHistory NetWorthSnapshot[]
+
+  @@map("users")
+}
+
+model UserProfile {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName   String
+  lastName    String
+  phoneNumber String?
+  avatarUrl   String?
+  dateOfBirth DateTime?
+  country     String?
+  city        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("user_profiles")
+}
+
+model UserPreferences {
+  id                      String   @id @default(uuid())
+  userId                  String   @unique
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultCurrency         String   @default("USD")
+  locale                  String   @default("en-US")
+  theme                   String   @default("system")
+  enableBiometrics        Boolean  @default(false)
+  enablePushNotifications Boolean  @default(true)
+  enableEmailAlerts       Boolean  @default(true)
+  enableTwoFactor         Boolean  @default(false)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@map("user_preferences")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  ipAddress String?
+  userAgent String?
+  expiresAt DateTime
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model FinancialAccount {
+  id                  String          @id @default(uuid())
+  userId              String
+  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                String
+  accountType         AccountType
+  category            AccountCategory
+  currency            String          @default("USD")
+  currentBalance      Decimal         @default(0.00) @db.Decimal(18, 2)
+  availableBalance    Decimal?        @db.Decimal(18, 2)
+  creditLimit         Decimal?        @db.Decimal(18, 2)
+  interestRate        Decimal?        @db.Decimal(5, 2)
+  institutionName     String
+  accountNumberMasked String?
+  status              AccountStatus   @default(ACTIVE)
+  isManual            Boolean         @default(true)
+  institutionId       String?
+  lastSyncedAt        DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  transactions        Transaction[]
+  balanceSnapshots    BalanceSnapshot[]
+  recurringSchedules  RecurringSchedule[]
+
+  @@index([userId, status])
+  @@map("financial_accounts")
+}
+
+model BalanceSnapshot {
+  id           String           @id @default(uuid())
+  accountId    String
+  account      FinancialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  balance      Decimal          @db.Decimal(18, 2)
+  snapshotDate DateTime
+  currency     String           @default("USD")
+  createdAt    DateTime         @default(now())
+
+  @@index([accountId, snapshotDate])
+  @@map("balance_snapshots")
+}
+
+model TransactionCategory {
+  id               String                @id @default(uuid())
+  name             String
+  slug             String                @unique
+  icon             String?
+  color            String?
+  parentCategoryId String?
+  parentCategory   TransactionCategory?  @relation("SubCategories", fields: [parentCategoryId], references: [id], onDelete: SetNull)
+  subCategories    TransactionCategory[] @relation("SubCategories")
+  isCustom         Boolean               @default(false)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  transactions     Transaction[]
+  categoryBudgets  CategoryBudget[]
+
+  @@map("transaction_categories")
+}
+
+model Transaction {
+  id                           String               @id @default(uuid())
+  userId                       String
+  user                         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId                    String
+  account                      FinancialAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  categoryId                   String?
+  category                     TransactionCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  type                         TransactionType
+  status                       TransactionStatus    @default(POSTED)
+  amount                       Decimal              @db.Decimal(18, 2)
+  currency                     String               @default("USD")
+  date                         DateTime
+  description                  String
+  notes                        String?
+  merchantName                 String?
+  tags                         String[]
+  isRecurring                  Boolean              @default(false)
+  recurringScheduleId          String?
+  transferDestinationAccountId String?
+  createdAt                    DateTime             @default(now())
+  updatedAt                    DateTime             @updatedAt
+
+  @@index([userId, date])
+  @@index([accountId, date])
+  @@map("transactions")
+}
+
+model RecurringSchedule {
+  id                 String             @id @default(uuid())
+  userId             String
+  accountId          String
+  account            FinancialAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  categoryId         String?
+  amount             Decimal            @db.Decimal(18, 2)
+  currency           String             @default("USD")
+  description        String
+  frequency          RecurringFrequency
+  startDate          DateTime
+  endDate            DateTime?
+  nextExecutionDate  DateTime
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([userId, isActive])
+  @@map("recurring_schedules")
+}
+
+model Portfolio {
+  id             String      @id @default(uuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  currency       String      @default("USD")
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  stocks         StockHolding[]
+  mutualFunds    MutualFundHolding[]
+  etfs           ETFHolding[]
+  bonds          BondHolding[]
+  cryptos        CryptoHolding[]
+  preciousMetals PreciousMetalHolding[]
+
+  @@index([userId])
+  @@map("portfolios")
+}
+
+model StockHolding {
+  id                  String    @id @default(uuid())
+  portfolioId         String
+  portfolio           Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  ticker              String
+  companyName         String
+  exchange            String
+  shares              Decimal   @db.Decimal(18, 4)
+  averageCostPerShare Decimal   @db.Decimal(18, 4)
+  currentPrice        Decimal   @db.Decimal(18, 4)
+  currency            String    @default("USD")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([portfolioId, ticker])
+  @@map("stock_holdings")
+}
+
+model MutualFundHolding {
+  id          String    @id @default(uuid())
+  portfolioId String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  schemeCode  String
+  fundName    String
+  fundFamily  String
+  fundType    String
+  units       Decimal   @db.Decimal(18, 4)
+  averageNav  Decimal   @db.Decimal(18, 4)
+  currentNav  Decimal   @db.Decimal(18, 4)
+  currency    String    @default("USD")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([portfolioId])
+  @@map("mutual_fund_holdings")
+}
+
+model ETFHolding {
+  id                  String    @id @default(uuid())
+  portfolioId         String
+  portfolio           Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  ticker              String
+  fundName            String
+  benchmarkIndex      String
+  shares              Decimal   @db.Decimal(18, 4)
+  averageCostPerShare Decimal   @db.Decimal(18, 4)
+  currentPrice        Decimal   @db.Decimal(18, 4)
+  expenseRatio        Decimal   @db.Decimal(5, 4)
+  currency            String    @default("USD")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([portfolioId, ticker])
+  @@map("etf_holdings")
+}
+
+model BondHolding {
+  id                 String    @id @default(uuid())
+  portfolioId        String
+  portfolio          Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  issuerName         String
+  bondType           String
+  isinOrCusip        String?
+  faceValue          Decimal   @db.Decimal(18, 2)
+  couponRate         Decimal   @db.Decimal(5, 2)
+  couponFrequency    String
+  maturityDate       DateTime
+  quantity           Decimal   @db.Decimal(18, 4)
+  purchasePrice      Decimal   @db.Decimal(18, 2)
+  currentMarketPrice Decimal   @db.Decimal(18, 2)
+  currency           String    @default("USD")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([portfolioId])
+  @@map("bond_holdings")
+}
+
+model CryptoHolding {
+  id                 String    @id @default(uuid())
+  portfolioId        String
+  portfolio          Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  symbol             String
+  coinName           String
+  network            String?
+  walletAddress      String?
+  isColdStorage      Boolean   @default(false)
+  quantity           Decimal   @db.Decimal(24, 8)
+  averageCostPerCoin Decimal   @db.Decimal(18, 4)
+  currentPrice       Decimal   @db.Decimal(18, 4)
+  currency           String    @default("USD")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([portfolioId, symbol])
+  @@map("crypto_holdings")
+}
+
+model PreciousMetalHolding {
+  id                      String      @id @default(uuid())
+  portfolioId             String
+  portfolio               Portfolio   @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  metalType               MetalType
+  storageType             StorageType
+  weight                  Decimal     @db.Decimal(18, 4)
+  weightUnit              WeightUnit
+  purity                  Decimal     @db.Decimal(5, 4)
+  totalPurchaseCost       Decimal     @db.Decimal(18, 2)
+  currentSpotPricePerUnit Decimal     @db.Decimal(18, 2)
+  currency                String      @default("USD")
+  vaultLocation           String?
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
+
+  @@index([portfolioId, metalType])
+  @@map("precious_metal_holdings")
+}
+
+model FixedAsset {
+  id                     String         @id @default(uuid())
+  userId                 String
+  user                   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                   String
+  assetType              FixedAssetType
+  purchaseDate           DateTime
+  purchasePrice          Decimal        @db.Decimal(18, 2)
+  estimatedCurrentValue  Decimal        @db.Decimal(18, 2)
+  currency               String         @default("USD")
+  appreciationRateAnnual Decimal?       @db.Decimal(5, 2)
+  depreciationRateAnnual Decimal?       @db.Decimal(5, 2)
+  address                String?
+  notes                  String?
+  isInsured              Boolean        @default(false)
+  linkedLiabilityId      String?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  @@index([userId])
+  @@map("fixed_assets")
+}
+
+model Liability {
+  id                 String        @id @default(uuid())
+  userId             String
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  liabilityType      LiabilityType
+  lenderName         String
+  originalPrincipal  Decimal       @db.Decimal(18, 2)
+  remainingPrincipal Decimal       @db.Decimal(18, 2)
+  interestRateAnnual Decimal       @db.Decimal(5, 2)
+  monthlyPayment     Decimal       @db.Decimal(18, 2)
+  currency           String        @default("USD")
+  originationDate    DateTime
+  expectedPayoffDate DateTime
+  linkedAssetId      String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([userId])
+  @@map("liabilities")
+}
+
+model Budget {
+  id                       String           @id @default(uuid())
+  userId                   String
+  user                     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                     String
+  period                   BudgetPeriod     @default(MONTHLY)
+  startDate                DateTime
+  endDate                  DateTime
+  totalLimitAmount         Decimal          @db.Decimal(18, 2)
+  currency                 String           @default("USD")
+  alertThresholdPercentage Decimal          @default(80.00) @db.Decimal(5, 2)
+  isActive                 Boolean          @default(true)
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+
+  categoryBudgets          CategoryBudget[]
+
+  @@index([userId, isActive])
+  @@map("budgets")
+}
+
+model CategoryBudget {
+  id          String              @id @default(uuid())
+  budgetId    String
+  budget      Budget              @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  categoryId  String
+  category    TransactionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  limitAmount Decimal             @db.Decimal(18, 2)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@unique([budgetId, categoryId])
+  @@map("category_budgets")
+}
+
+model FinancialGoal {
+  id                         String          @id @default(uuid())
+  userId                     String
+  user                       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title                      String
+  description                String?
+  category                   GoalCategory
+  priority                   GoalPriority    @default(MEDIUM)
+  status                     GoalStatus      @default(IN_PROGRESS)
+  targetAmount               Decimal         @db.Decimal(18, 2)
+  currentAmount              Decimal         @default(0.00) @db.Decimal(18, 2)
+  currency                   String          @default("USD")
+  targetDate                 DateTime
+  monthlyContributionTarget  Decimal         @default(0.00) @db.Decimal(18, 2)
+  linkedAccountId            String?
+  createdAt                  DateTime        @default(now())
+  updatedAt                  DateTime        @updatedAt
+
+  milestones                 GoalMilestone[]
+
+  @@index([userId, status])
+  @@map("financial_goals")
+}
+
+model GoalMilestone {
+  id           String        @id @default(uuid())
+  goalId       String
+  goal         FinancialGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  name         String
+  targetAmount Decimal       @db.Decimal(18, 2)
+  targetDate   DateTime
+  isReached    Boolean       @default(false)
+  reachedAt    DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([goalId])
+  @@map("goal_milestones")
+}
+
+model Notification {
+  id        String               @id @default(uuid())
+  userId    String
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic     String
+  title     String
+  message   String
+  priority  NotificationPriority @default(NORMAL)
+  channels  String[]
+  isRead    Boolean              @default(false)
+  readAt    DateTime?
+  actionUrl String?
+  metadata  Json?
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model IntegrationConnection {
+  id                   String              @id @default(uuid())
+  userId               String
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider             IntegrationProvider
+  institutionId        String?
+  institutionName      String
+  status               SyncStatus          @default(HEALTHY)
+  lastSuccessfulSyncAt DateTime?
+  lastAttemptedSyncAt  DateTime?
+  errorMessage         String?
+  accountsLinkedCount  Int                 @default(0)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@index([userId, provider])
+  @@map("integration_connections")
+}
+
+model FinancialDocument {
+  id            String           @id @default(uuid())
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category      DocumentCategory
+  fileName      String
+  fileSizeBytes Int
+  mimeType      String
+  storageKey    String
+  description   String?
+  tags          String[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([userId, category])
+  @@map("financial_documents")
+}
+
+model FinancialInsight {
+  id                       String        @id @default(uuid())
+  userId                   String
+  user                     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type                     String
+  title                    String
+  summary                  String
+  detailedAnalysis         String
+  impact                   InsightImpact @default(NEUTRAL)
+  actionableStep           String?
+  potentialSavingsEstimate Decimal?      @db.Decimal(18, 2)
+  confidenceScore          Decimal       @default(0.85) @db.Decimal(3, 2)
+  isDismissed              Boolean       @default(false)
+  expiresAt                DateTime?
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+
+  @@index([userId, isDismissed])
+  @@map("financial_insights")
+}
+
+model NetWorthSnapshot {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recordDate       DateTime
+  totalAssets      Decimal  @db.Decimal(18, 2)
+  totalLiabilities Decimal  @db.Decimal(18, 2)
+  netWorth         Decimal  @db.Decimal(18, 2)
+  currency         String   @default("USD")
+  createdAt        DateTime @default(now())
+
+  @@index([userId, recordDate])
+  @@map("net_worth_snapshots")
+}
+
