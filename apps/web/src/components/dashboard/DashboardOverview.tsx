@@ -36,6 +36,7 @@ import { UpcomingEventsWidget } from './UpcomingEventsWidget';
 import { FinancialInsightsWidget } from './FinancialInsightsWidget';
 import { QuickAddModal } from './QuickAddModal';
 import { DashboardCustomizerModal } from './DashboardCustomizerModal';
+import { CasImportModal } from '../investments/CasImportModal';
 import { Button } from '../ui/Button';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
@@ -87,6 +88,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
   const [txTypeFilter, setTxTypeFilter] = useState<string>('all');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
+  const [isCasModalOpen, setIsCasModalOpen] = useState(false);
 
   // Loading & Error States
   const [isLoading, setIsLoading] = useState(true);
@@ -381,6 +383,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
         onPeriodChange={setPeriod}
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
         onOpenCustomize={() => setIsCustomizeOpen(true)}
+        onOpenCasImport={() => setIsCasModalOpen(true)}
         onRefresh={() => fetchDashboardData(true)}
         isLoading={isRefreshing}
       />
@@ -448,6 +451,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
         onSavePreferences={handleSavePreferences}
         onResetToZero={handleResetToZero}
         onSeedSampleData={handleSeedSampleData}
+      />
+
+      {/* CDSL / NSDL Demat CAS Import Modal */}
+      <CasImportModal
+        isOpen={isCasModalOpen}
+        onClose={() => setIsCasModalOpen(false)}
+        onSuccess={() => fetchDashboardData(true)}
       />
     </div>
   );

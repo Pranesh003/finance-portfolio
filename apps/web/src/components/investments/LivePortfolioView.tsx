@@ -3,13 +3,15 @@ import { useTheme } from '../../context/ThemeContext';
 import { apiClient } from '../../api';
 import { Button } from '../ui/Button';
 import { AddInvestmentModal } from './AddInvestmentModal';
+import { CasImportModal } from './CasImportModal';
 import {
   TrendingUp,
   TrendingDown,
   Plus,
   RefreshCw,
   Trash2,
-  Briefcase
+  Briefcase,
+  FileSpreadsheet
 } from 'lucide-react';
 
 export const LivePortfolioView: React.FC = () => {
@@ -17,6 +19,7 @@ export const LivePortfolioView: React.FC = () => {
   const [portfolio, setPortfolio] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isCasModalOpen, setIsCasModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'STOCKS' | 'MUTUAL_FUNDS' | 'GOLD' | 'CRYPTO'>('ALL');
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -174,6 +177,21 @@ export const LivePortfolioView: React.FC = () => {
           <Button variant="ghost" onClick={fetchPortfolio} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             Refresh
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => setIsCasModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: `1px solid ${colors.brand.primary}`,
+              color: colors.brand.primaryLight,
+              fontWeight: 600
+            }}
+          >
+            <FileSpreadsheet size={15} />
+            Import Demat CAS
           </Button>
           <Button variant="primary" onClick={() => setIsAddModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Plus size={16} />
@@ -408,6 +426,12 @@ export const LivePortfolioView: React.FC = () => {
       <AddInvestmentModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
+        onSuccess={fetchPortfolio}
+      />
+
+      <CasImportModal
+        isOpen={isCasModalOpen}
+        onClose={() => setIsCasModalOpen(false)}
         onSuccess={fetchPortfolio}
       />
     </div>

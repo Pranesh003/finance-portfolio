@@ -10,7 +10,8 @@ import {
   SlidersHorizontal,
   RefreshCw,
   Sparkles,
-  Calendar
+  Calendar,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface DashboardHeaderProps {
@@ -18,6 +19,7 @@ interface DashboardHeaderProps {
   onPeriodChange: (p: TimeFilterPeriod) => void;
   onOpenQuickAdd: () => void;
   onOpenCustomize: () => void;
+  onOpenCasImport?: () => void;
   onRefresh: () => void;
   isLoading?: boolean;
 }
@@ -38,6 +40,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   onPeriodChange,
   onOpenQuickAdd,
   onOpenCustomize,
+  onOpenCasImport,
   onRefresh,
   isLoading = false
 }) => {
@@ -147,6 +150,23 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           >
             Customize
           </Button>
+
+          {onOpenCasImport && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onOpenCasImport}
+              leftIcon={<FileSpreadsheet size={15} />}
+              title="Fetch holdings from CDSL / NSDL Demat statement"
+              style={{
+                border: `1px solid ${colors.brand.primary}`,
+                color: colors.brand.primaryLight,
+                fontWeight: 600
+              }}
+            >
+              Import Demat CAS
+            </Button>
+          )}
 
           <Button
             variant="primary"

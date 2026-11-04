@@ -40,7 +40,9 @@ import {
   UpcomingFinancialEvent,
   DashboardFinancialInsight,
   DashboardPreferences,
-  QuickAddPayload
+  QuickAddPayload,
+  CasImportResult,
+  CasParsedItem
 } from '@finance/types';
 
 export interface ApiClientConfig {
@@ -298,6 +300,17 @@ export class FinanceApiClient {
     deleteHolding: (type: 'stock' | 'mutual-fund' | 'crypto' | 'metal', id: string) =>
       this.request<{ success: boolean; message: string }>(`/api/v1/investments/holdings/${type}/${id}`, {
         method: 'DELETE'
+      }),
+    getCasSample: () => this.request<CasImportResult>('/api/v1/investments/cas/sample'),
+    parseCas: (payload: { fileBase64?: string; fileName?: string; password?: string; rawText?: string }) =>
+      this.request<CasImportResult>('/api/v1/investments/cas/parse', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+    commitCas: (items: CasParsedItem[]) =>
+      this.request<CasImportResult>('/api/v1/investments/cas/commit', {
+        method: 'POST',
+        body: JSON.stringify({ items })
       })
   };
 

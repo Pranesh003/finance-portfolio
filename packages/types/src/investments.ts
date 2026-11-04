@@ -149,3 +149,37 @@ export interface AssetAllocationItem {
   rebalanceVariance?: number;
 }
 
+// --- CAS IMPORT (CDSL / NSDL / CAMS) ---
+export interface CasParsedItem {
+  type: 'EQUITY' | 'MUTUAL_FUND';
+  isin: string;
+  name: string;
+  quantity: number;
+  navOrPrice?: number;
+  folioOrDpid?: string;
+  resolvedTicker?: string;
+  exchange?: string;
+  currentValue?: number;
+  selected?: boolean;
+}
+
+export interface CasImportRequest {
+  fileName: string;
+  fileBase64: string;
+  password?: string;
+}
+
+export interface CasImportResult {
+  depository?: 'CDSL' | 'NSDL' | 'CAMS_KFINTECH' | 'GENERIC';
+  statementDate?: string;
+  investorName?: string;
+  panMasked?: string;
+  totalParsedHoldings: number;
+  stocksCount: number;
+  mutualFundsCount: number;
+  totalImportedValue: number;
+  items: CasParsedItem[];
+  importedStockIds?: string[];
+  importedMutualFundIds?: string[];
+}
+

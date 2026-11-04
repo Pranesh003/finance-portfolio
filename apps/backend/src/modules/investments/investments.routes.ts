@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { investmentsService } from './investments.service';
-import { ApiResponse } from '@finance/types';
+import { casParserService } from './cas-parser.service';
+import { ApiResponse, CasImportResult } from '@finance/types';
 import { optionalAuthenticate } from '../../core/middleware/authenticate';
 import { prisma } from '../../core/database/prisma';
 
@@ -176,6 +177,83 @@ router.delete('/holdings/:type/:id', async (req: Request, res: Response, next: N
       message: success ? 'Holding deleted successfully' : 'Failed to delete holding',
       timestamp: new Date().toISOString()
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- CDSL / NSDL / CAMS CAS IMPORT ---
+
+// 1. Get Sample CAS Data for 1-click preview
+router.get('/cas/sample', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const rawText = casParserService.getSampleCdslStatementText();
+    const parsed = casParserService.parseStatementText(rawText);
+    const response: ApiResponse<CasImportResult> = {
+      success: true,
+      data: parsed,
+      timestamp: new Date().toISOString()
+    };
+    res.json(response);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 2. Parse uploaded PDF or raw text statement
+router.post('/cas/parse', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { fileBase64, password, rawText } = req.body;
+
+    let statementText = rawText || '';
+
+    if (fileBase64) {
+      const buffer = Buffer.from(fileBase64.replace(/^data:application\/pdf;base64,/, ''), 'base64');
+      statementText = await casParserService.parsePdf(buffer, password);
+    }
+
+    if (!statementText || statementText.trim().length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Statement content is empty or unreadable'
+      });
+      return;
+    }
+
+    const parsed = casParserService.parseStatementText(statementText);
+    const response: ApiResponse<CasImportResult> = {
+      success: true,
+      data: parsed,
+      timestamp: new Date().toISOString()
+    };
+    res.json(response);
+  } catch (err: any) {
+    next(err);
+  }
+});
+
+// 3. Commit selected holdings into Neon Database
+router.post('/cas/commit', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = await getEffectiveUserId(req);
+    const { items } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'No holdings selected to import'
+      });
+      return;
+    }
+
+    const result = await casParserService.commitHoldingsToDatabase(userId, items);
+    const response: ApiResponse<CasImportResult> = {
+      success: true,
+      message: `Successfully imported ${result.stocksCount} stocks and ${result.mutualFundsCount} mutual funds into your portfolio!`,
+      data: result,
+      timestamp: new Date().toISOString()
+    };
+    res.status(201).json(response);
   } catch (err) {
     next(err);
   }
