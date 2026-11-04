@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { env } from '../../config/env';
 import { logger } from '../logger/logger';
 
 declare global {
@@ -9,6 +10,7 @@ declare global {
 export const prisma =
   global.__prisma ||
   new PrismaClient({
+    datasourceUrl: env.DATABASE_URL,
     log: [
       { emit: 'event', level: 'query' },
       { emit: 'event', level: 'error' },

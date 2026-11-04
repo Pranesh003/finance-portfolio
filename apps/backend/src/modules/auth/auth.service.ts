@@ -207,6 +207,47 @@ export class AuthService {
     }
   }
 
+  private mapPrismaUser(dbUser: any): User {
+    return {
+      id: dbUser.id,
+      email: dbUser.email,
+      role: dbUser.role,
+      isActive: dbUser.isActive,
+      isEmailVerified: dbUser.isEmailVerified,
+      isPhoneVerified: dbUser.isPhoneVerified,
+      kycStatus: dbUser.kycStatus,
+      onboardingCompleted: dbUser.onboardingCompleted,
+      createdAt: dbUser.createdAt instanceof Date ? dbUser.createdAt.toISOString() : String(dbUser.createdAt),
+      updatedAt: dbUser.updatedAt instanceof Date ? dbUser.updatedAt.toISOString() : String(dbUser.updatedAt),
+      profile: {
+        firstName: dbUser.profile?.firstName || '',
+        lastName: dbUser.profile?.lastName || '',
+        phoneNumber: dbUser.profile?.phoneNumber || undefined,
+        avatarUrl: dbUser.profile?.avatarUrl || undefined,
+        dateOfBirth: dbUser.profile?.dateOfBirth ? (dbUser.profile.dateOfBirth instanceof Date ? dbUser.profile.dateOfBirth.toISOString() : String(dbUser.profile.dateOfBirth)) : undefined,
+        country: dbUser.profile?.country || 'India',
+        city: dbUser.profile?.city || undefined,
+        timeZone: dbUser.profile?.timeZone || 'Asia/Kolkata',
+        financialYear: dbUser.profile?.financialYear || 'APRIL_MARCH',
+        dateFormat: dbUser.profile?.dateFormat || 'DD/MM/YYYY'
+      },
+      preferences: {
+        defaultCurrency: (dbUser.preferences?.defaultCurrency as any) || 'INR',
+        locale: dbUser.preferences?.locale || 'en-IN',
+        theme: (dbUser.preferences?.theme as any) || 'dark',
+        financialYear: (dbUser.preferences?.financialYear as any) || 'APRIL_MARCH',
+        workspaceType: (dbUser.preferences?.workspaceType as any) || 'INDIVIDUAL',
+        enabledModules: (dbUser.preferences?.enabledModules as any) || ['accounts', 'transactions', 'expenses', 'income', 'investments', 'budgets', 'goals'],
+        initialFinancialGoalTitle: dbUser.preferences?.initialFinancialGoalTitle || undefined,
+        initialFinancialGoalTarget: dbUser.preferences?.initialFinancialGoalTarget ? Number(dbUser.preferences.initialFinancialGoalTarget) : undefined,
+        enableBiometrics: dbUser.preferences?.enableBiometrics || false,
+        enablePushNotifications: dbUser.preferences?.enablePushNotifications !== false,
+        enableEmailAlerts: dbUser.preferences?.enableEmailAlerts !== false,
+        enableTwoFactor: dbUser.preferences?.enableTwoFactor || false
+      }
+    };
+  }
+
   public async register(
     req: RegisterRequest,
     ipAddress?: string,
@@ -214,8 +255,18 @@ export class AuthService {
   ): Promise<AuthUserResponse> {
     const emailNormalized = req.email.toLowerCase().trim();
 
-    // Check if user already exists
-    if (memoryUsers.has(emailNormalized)) {
+    // Check database first, then memory store
+    let userExists = false;
+    try {
+      const existingDb = await prisma.user.findUnique({
+        where: { email: emailNormalized }
+      });
+      if (existingDb) userExists = true;
+    } catch (err) {
+      logger.warn('[AUTH] Could not check DB for existing user, checking memory:', err);
+    }
+
+    if (userExists || memoryUsers.has(emailNormalized)) {
       await this.recordAuditLog('REGISTER_FAILED_DUPLICATE', null, 'FAILURE', ipAddress, userAgent, { email: emailNormalized });
       throw new ConflictError('An account with this email already exists');
     }
@@ -230,6 +281,51 @@ export class AuthService {
 
     const userId = crypto.randomUUID();
     const now = new Date().toISOString();
+
+    // Persist to Neon PostgreSQL
+    try {
+      await prisma.user.create({
+        data: {
+          id: userId,
+          email: emailNormalized,
+          passwordHash,
+          role: 'USER',
+          isActive: true,
+          isEmailVerified: false,
+          isPhoneVerified: false,
+          kycStatus: 'UNVERIFIED',
+          onboardingCompleted: false,
+          profile: {
+            create: {
+              firstName: req.firstName.trim(),
+              lastName: req.lastName.trim(),
+              phoneNumber: req.phoneNumber?.trim() || null,
+              country: req.country || 'India',
+              timeZone: req.timeZone || 'Asia/Kolkata',
+              financialYear: req.financialYear || 'APRIL_MARCH',
+              dateFormat: 'DD/MM/YYYY'
+            }
+          },
+          preferences: {
+            create: {
+              defaultCurrency: req.defaultCurrency || 'INR',
+              locale: 'en-IN',
+              theme: req.theme || 'dark',
+              financialYear: req.financialYear || 'APRIL_MARCH',
+              workspaceType: 'INDIVIDUAL',
+              enabledModules: ['accounts', 'transactions', 'expenses', 'income', 'investments', 'budgets', 'goals'],
+              enableBiometrics: false,
+              enablePushNotifications: true,
+              enableEmailAlerts: true,
+              enableTwoFactor: false
+            }
+          }
+        }
+      });
+      logger.info(`[PRISMA DB] Successfully stored registered user in Neon PostgreSQL: ${emailNormalized} (${userId})`);
+    } catch (dbErr) {
+      logger.warn('[PRISMA DB] Could not persist user to Neon DB, falling back to memory store:', dbErr);
+    }
 
     const newUser: StoredUser = {
       id: userId,
@@ -274,6 +370,29 @@ export class AuthService {
     const deviceInfo = parseUserAgent(userAgent);
     const tokens = this.generateTokens(newUser, sessionId);
     const tokenHash = this.hashToken(tokens.refreshToken);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    // Persist session to Neon PostgreSQL
+    try {
+      await prisma.session.create({
+        data: {
+          id: sessionId,
+          userId,
+          tokenHash,
+          ipAddress: ipAddress || null,
+          userAgent: userAgent || null,
+          deviceType: deviceInfo.deviceType || null,
+          deviceName: deviceInfo.deviceName || null,
+          browser: deviceInfo.browser || null,
+          os: deviceInfo.os || null,
+          lastActiveAt: new Date(),
+          expiresAt,
+          isActive: true
+        }
+      });
+    } catch (sErr) {
+      logger.warn('[AUTH] Could not persist session to DB:', sErr);
+    }
 
     const session: StoredSession = {
       id: sessionId,
@@ -286,7 +405,7 @@ export class AuthService {
       browser: deviceInfo.browser,
       os: deviceInfo.os,
       lastActiveAt: new Date(),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt,
       isActive: true
     };
     memorySessions.set(sessionId, session);
@@ -296,7 +415,7 @@ export class AuthService {
       userId,
       sessionId,
       tokenHash,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt,
       isRevoked: false
     });
 
@@ -332,57 +451,146 @@ export class AuthService {
     userAgent?: string
   ): Promise<AuthUserResponse> {
     const emailNormalized = req.email.toLowerCase().trim();
-    const user = memoryUsers.get(emailNormalized);
 
-    if (!user) {
+    // 1. Try fetching from Neon PostgreSQL first
+    let userRecord: { user: User; passwordHash: string; failedAttempts: number; lockoutUntil?: Date | null; isActive: boolean } | null = null;
+
+    try {
+      const dbUser = await prisma.user.findUnique({
+        where: { email: emailNormalized },
+        include: { profile: true, preferences: true }
+      });
+      if (dbUser) {
+        userRecord = {
+          user: this.mapPrismaUser(dbUser),
+          passwordHash: dbUser.passwordHash,
+          failedAttempts: dbUser.failedLoginAttempts,
+          lockoutUntil: dbUser.lockoutUntil,
+          isActive: dbUser.isActive
+        };
+      }
+    } catch (err) {
+      logger.warn('[AUTH] Could not fetch user from Neon DB, trying memory:', err);
+    }
+
+    // Fallback to in-memory store
+    if (!userRecord) {
+      const memUser = memoryUsers.get(emailNormalized);
+      if (memUser) {
+        userRecord = {
+          user: memUser,
+          passwordHash: memUser.passwordHash,
+          failedAttempts: memUser.failedLoginAttempts || 0,
+          lockoutUntil: memUser.lockoutUntil,
+          isActive: memUser.isActive
+        };
+      }
+    }
+
+    if (!userRecord) {
       await this.recordAuditLog('LOGIN_FAILED', null, 'FAILURE', ipAddress, userAgent, { email: emailNormalized, reason: 'USER_NOT_FOUND' });
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    if (!user.isActive) {
-      await this.recordAuditLog('LOGIN_FAILED_DEACTIVATED', user.id, 'FAILURE', ipAddress, userAgent);
+    if (!userRecord.isActive) {
+      await this.recordAuditLog('LOGIN_FAILED_DEACTIVATED', userRecord.user.id, 'FAILURE', ipAddress, userAgent);
       throw new ForbiddenError('This account has been deactivated. Please contact support to reactivate.');
     }
 
     // Check account lockout
-    if (user.lockoutUntil && user.lockoutUntil > new Date()) {
-      const remainingMinutes = Math.ceil((user.lockoutUntil.getTime() - Date.now()) / (60 * 1000));
-      await this.recordAuditLog('LOGIN_FAILED_LOCKED', user.id, 'FAILURE', ipAddress, userAgent, { remainingMinutes });
+    if (userRecord.lockoutUntil && userRecord.lockoutUntil > new Date()) {
+      const remainingMinutes = Math.ceil((userRecord.lockoutUntil.getTime() - Date.now()) / (60 * 1000));
+      await this.recordAuditLog('LOGIN_FAILED_LOCKED', userRecord.user.id, 'FAILURE', ipAddress, userAgent, { remainingMinutes });
       throw new ForbiddenError(`Account temporarily locked due to multiple failed attempts. Try again in ${remainingMinutes} minute(s).`);
     }
 
     // Verify password
-    const isPasswordValid = await bcrypt.compare(req.password, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(req.password, userRecord.passwordHash);
 
     if (!isPasswordValid) {
-      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
-      let lockoutMessage = 'Invalid email or password';
-
-      if (user.failedLoginAttempts >= 5) {
-        user.lockoutUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
-        lockoutMessage = 'Too many failed login attempts. Your account is temporarily locked for 15 minutes.';
+      userRecord.failedAttempts = (userRecord.failedAttempts || 0) + 1;
+      const memUser = memoryUsers.get(emailNormalized);
+      if (memUser) {
+        memUser.failedLoginAttempts = userRecord.failedAttempts;
       }
 
-      await this.recordAuditLog('LOGIN_FAILED_PASSWORD', user.id, 'FAILURE', ipAddress, userAgent, {
-        failedAttempts: user.failedLoginAttempts
+      let lockoutMessage = 'Invalid email or password';
+
+      if (userRecord.failedAttempts >= 5) {
+        const lockoutDate = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+        userRecord.lockoutUntil = lockoutDate;
+        if (memUser) {
+          memUser.lockoutUntil = lockoutDate;
+        }
+        lockoutMessage = 'Too many failed login attempts. Your account is temporarily locked for 15 minutes.';
+        try {
+          await prisma.user.update({
+            where: { id: userRecord.user.id },
+            data: { failedLoginAttempts: userRecord.failedAttempts, lockoutUntil: lockoutDate }
+          });
+        } catch { /* ignore */ }
+      }
+
+      await this.recordAuditLog('LOGIN_FAILED_PASSWORD', userRecord.user.id, 'FAILURE', ipAddress, userAgent, {
+        failedAttempts: userRecord.failedAttempts
       });
 
       throw new UnauthorizedError(lockoutMessage);
     }
 
     // Reset failed login attempts on successful credentials
-    user.failedLoginAttempts = 0;
-    user.lockoutUntil = null;
+    try {
+      await prisma.user.update({
+        where: { id: userRecord.user.id },
+        data: { failedLoginAttempts: 0, lockoutUntil: null }
+      });
+    } catch { /* ignore */ }
+
+    // Mirror in memory store
+    const memUser = memoryUsers.get(emailNormalized);
+    if (memUser) {
+      memUser.failedLoginAttempts = 0;
+      memUser.lockoutUntil = null;
+    } else {
+      memoryUsers.set(emailNormalized, {
+        ...userRecord.user,
+        passwordHash: userRecord.passwordHash,
+        failedLoginAttempts: 0
+      });
+    }
 
     // Create session
     const sessionId = crypto.randomUUID();
     const deviceInfo = parseUserAgent(userAgent);
-    const tokens = this.generateTokens(user, sessionId);
+    const tokens = this.generateTokens(userRecord.user, sessionId);
     const tokenHash = this.hashToken(tokens.refreshToken);
+    const sessionExpiresAt = new Date(Date.now() + (req.rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000);
+
+    // Persist session to Neon DB
+    try {
+      await prisma.session.create({
+        data: {
+          id: sessionId,
+          userId: userRecord.user.id,
+          tokenHash,
+          ipAddress: ipAddress || null,
+          userAgent: userAgent || null,
+          deviceType: deviceInfo.deviceType || null,
+          deviceName: deviceInfo.deviceName || null,
+          browser: deviceInfo.browser || null,
+          os: deviceInfo.os || null,
+          lastActiveAt: new Date(),
+          expiresAt: sessionExpiresAt,
+          isActive: true
+        }
+      });
+    } catch (sErr) {
+      logger.warn('[AUTH] Could not persist session to DB:', sErr);
+    }
 
     const session: StoredSession = {
       id: sessionId,
-      userId: user.id,
+      userId: userRecord.user.id,
       tokenHash,
       ipAddress,
       userAgent,
@@ -391,27 +599,26 @@ export class AuthService {
       browser: deviceInfo.browser,
       os: deviceInfo.os,
       lastActiveAt: new Date(),
-      expiresAt: new Date(Date.now() + (req.rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000),
+      expiresAt: sessionExpiresAt,
       isActive: true
     };
     memorySessions.set(sessionId, session);
 
     memoryRefreshTokens.set(tokenHash, {
       id: crypto.randomUUID(),
-      userId: user.id,
+      userId: userRecord.user.id,
       sessionId,
       tokenHash,
       expiresAt: session.expiresAt,
       isRevoked: false
     });
 
-    await this.recordAuditLog('LOGIN_SUCCESS', user.id, 'SUCCESS', ipAddress, userAgent, {
+    await this.recordAuditLog('LOGIN_SUCCESS', userRecord.user.id, 'SUCCESS', ipAddress, userAgent, {
       device: deviceInfo.deviceName,
       rememberMe: req.rememberMe
     });
 
-    const { passwordHash: _, failedLoginAttempts: __, lockoutUntil: ___, ...sanitizedUser } = user;
-    return { user: sanitizedUser, tokens, sessionId };
+    return { user: userRecord.user, tokens, sessionId };
   }
 
   public async socialAuth(
@@ -892,6 +1099,21 @@ export class AuthService {
       }
     }
     return null;
+  }
+
+  public async getUserByIdAsync(id: string): Promise<User | null> {
+    try {
+      const dbUser = await prisma.user.findUnique({
+        where: { id },
+        include: { profile: true, preferences: true }
+      });
+      if (dbUser) {
+        return this.mapPrismaUser(dbUser);
+      }
+    } catch (err) {
+      logger.warn('[AUTH] DB fetch user error, falling back to memory:', err);
+    }
+    return this.getUserById(id);
   }
 
   public getDemoUser(): User {

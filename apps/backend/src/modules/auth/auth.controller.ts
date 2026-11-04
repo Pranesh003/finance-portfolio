@@ -274,7 +274,7 @@ export class AuthController {
   public async getCurrentUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user?.id;
-      const user = userId ? authService.getUserById(userId) : authService.getDemoUser();
+      const user = userId ? await authService.getUserByIdAsync(userId) : authService.getDemoUser();
 
       if (!user) {
         res.status(404).json({ success: false, message: 'User not found' });

@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { env } from '../../config/env';
+import { prisma } from '../../core/database/prisma';
 import { authService } from '../auth/auth.service';
 import {
   User,
@@ -17,7 +18,7 @@ import {
 
 export class UserService {
   public async getProfile(userId: string): Promise<User> {
-    const user = authService.getUserById(userId);
+    const user = await authService.getUserByIdAsync(userId);
     if (!user) {
       throw new NotFoundError('User profile not found');
     }
@@ -25,6 +26,53 @@ export class UserService {
   }
 
   public async updateProfile(userId: string, data: UpdateProfileRequest): Promise<User> {
+    // Persist to Neon PostgreSQL
+    try {
+      await prisma.userProfile.upsert({
+        where: { userId },
+        update: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phoneNumber: data.phoneNumber,
+          avatarUrl: data.avatarUrl,
+          country: data.country,
+          city: data.city,
+          timeZone: data.timeZone,
+          financialYear: data.financialYear,
+          dateFormat: data.dateFormat
+        },
+        create: {
+          userId,
+          firstName: data.firstName || '',
+          lastName: data.lastName || '',
+          phoneNumber: data.phoneNumber,
+          country: data.country || 'India',
+          timeZone: data.timeZone || 'Asia/Kolkata',
+          financialYear: data.financialYear || 'APRIL_MARCH',
+          dateFormat: data.dateFormat || 'DD/MM/YYYY'
+        }
+      });
+
+      if (data.defaultCurrency || data.enableEmailAlerts !== undefined || data.enablePushNotifications !== undefined) {
+        await prisma.userPreferences.upsert({
+          where: { userId },
+          update: {
+            defaultCurrency: data.defaultCurrency,
+            financialYear: data.financialYear,
+            enableEmailAlerts: data.enableEmailAlerts,
+            enablePushNotifications: data.enablePushNotifications,
+            enableTwoFactor: data.enableTwoFactor,
+            enableBiometrics: data.enableBiometrics
+          },
+          create: {
+            userId,
+            defaultCurrency: data.defaultCurrency || 'INR',
+            financialYear: data.financialYear || 'APRIL_MARCH'
+          }
+        });
+      }
+    } catch { /* DB fallback */ }
+
     const stores = authService.getMemoryStores();
     let targetUser: any;
 
@@ -36,7 +84,9 @@ export class UserService {
     }
 
     if (!targetUser) {
-      throw new NotFoundError('User not found');
+      const fetched = await authService.getUserByIdAsync(userId);
+      if (!fetched) throw new NotFoundError('User not found');
+      return fetched;
     }
 
     if (data.firstName) targetUser.profile.firstName = data.firstName;

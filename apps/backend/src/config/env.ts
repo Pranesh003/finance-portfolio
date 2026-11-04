@@ -1,10 +1,15 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { z } from 'zod';
 
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const nodeEnv = process.env.NODE_ENV || 'development';
 
-// Load environment-specific file if present, fallback to .env
+// Load environment-specific file if present, checking both apps/backend and root cwd
+dotenv.config({ path: path.resolve(currentDir, '../../../.env') });
+dotenv.config({ path: path.resolve(currentDir, '../../.env') });
+dotenv.config({ path: path.resolve(process.cwd(), `apps/backend/.env`) });
 dotenv.config({ path: path.resolve(process.cwd(), `.env.${nodeEnv}`) });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 

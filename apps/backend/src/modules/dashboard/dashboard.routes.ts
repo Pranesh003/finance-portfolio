@@ -37,3 +37,4 @@ router.post('/reset', (req, res, next) => dashboardController.resetData(req, res
 router.post('/seed', (req, res, next) => dashboardController.seedSampleData(req, res, next));
 
 export const dashboardRouter = router;
+
