@@ -1,22 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import { PortfolioSummary } from '@finance/types';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { Button } from '../ui/Button';
+import { TrendingUp, TrendingDown, Plus } from 'lucide-react';
+import { AddInvestmentModal } from '../investments/AddInvestmentModal';
 
 interface PortfolioPerformanceWidgetProps {
   portfolio: PortfolioSummary;
   isLoading?: boolean;
+  onRefresh?: () => void;
 }
 
 export const PortfolioPerformanceWidget: React.FC<PortfolioPerformanceWidgetProps> = ({
   portfolio,
-  isLoading = false
+  isLoading = false,
+  onRefresh
 }) => {
   const { colors } = useTheme();
   const { formatMoney } = useCurrency();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   void isLoading;
 
   const isUnrealizedPositive = portfolio.unrealizedPnL >= 0;
@@ -24,18 +29,29 @@ export const PortfolioPerformanceWidget: React.FC<PortfolioPerformanceWidgetProp
   const isOverallPositive = portfolio.overallROI >= 0;
 
   return (
-    <Card
-      title="Investment Portfolio Performance"
-      subtitle="Comprehensive holdings valuation across equities, mutual funds, ETFs, bullion and fixed income"
-      actions={
-        <Badge variant={portfolio.dayPnL >= 0 ? 'income' : 'expense'} size="sm">
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {portfolio.dayPnL >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-            Day: {portfolio.dayPnL >= 0 ? '+' : ''}{formatMoney(portfolio.dayPnL)} ({portfolio.dayPnLPct.toFixed(2)}%)
-          </span>
-        </Badge>
-      }
-    >
+    <>
+      <Card
+        title="Investment Portfolio Performance"
+        subtitle="Comprehensive holdings valuation across equities, mutual funds, ETFs, bullion and fixed income"
+        actions={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsAddModalOpen(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              <Plus size={13} /> Add Real Asset
+            </Button>
+            <Badge variant={portfolio.dayPnL >= 0 ? 'income' : 'expense'} size="sm">
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {portfolio.dayPnL >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                Day: {portfolio.dayPnL >= 0 ? '+' : ''}{formatMoney(portfolio.dayPnL)} ({portfolio.dayPnLPct.toFixed(2)}%)
+              </span>
+            </Badge>
+          </div>
+        }
+      >
       <div
         style={{
           display: 'grid',
@@ -96,5 +112,14 @@ export const PortfolioPerformanceWidget: React.FC<PortfolioPerformanceWidgetProp
         </div>
       </div>
     </Card>
-  );
+
+    <AddInvestmentModal
+      isOpen={isAddModalOpen}
+      onClose={() => setIsAddModalOpen(false)}
+      onSuccess={() => {
+        if (onRefresh) onRefresh();
+      }}
+    />
+  </>
+);
 };

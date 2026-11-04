@@ -6,9 +6,10 @@ import { authenticate } from '../../core/middleware/authenticate';
 const router = Router();
 router.use(authenticate);
 
-router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const metals = await investmentsService.getPreciousMetals();
+    const userId = req.user?.id || 'demo_user';
+    const metals = await investmentsService.getPreciousMetals(userId);
     const response: ApiResponse<PreciousMetalHolding[]> = {
       success: true,
       data: metals,

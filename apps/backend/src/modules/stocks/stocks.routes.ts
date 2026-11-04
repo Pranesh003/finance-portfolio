@@ -6,9 +6,10 @@ import { authenticate } from '../../core/middleware/authenticate';
 const router = Router();
 router.use(authenticate);
 
-router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const stocks = await investmentsService.getStocks();
+    const userId = req.user?.id || 'demo_user';
+    const stocks = await investmentsService.getStocks(userId);
     const response: ApiResponse<StockHolding[]> = {
       success: true,
       data: stocks,

@@ -6,9 +6,10 @@ import { authenticate } from '../../core/middleware/authenticate';
 const router = Router();
 router.use(authenticate);
 
-router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const mutualFunds = await investmentsService.getMutualFunds();
+    const userId = req.user?.id || 'demo_user';
+    const mutualFunds = await investmentsService.getMutualFunds(userId);
     const response: ApiResponse<MutualFundHolding[]> = {
       success: true,
       data: mutualFunds,

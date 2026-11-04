@@ -22,6 +22,10 @@ export interface InvestmentPortfolio extends BaseEntity {
   unrealizedGainLossPercentage: number;
   realizedGainLoss: number;
   holdingsCount: number;
+  stocks?: StockHolding[];
+  mutualFunds?: MutualFundHolding[];
+  cryptos?: CryptoHolding[];
+  preciousMetals?: PreciousMetalHolding[];
 }
 
 export type OrderSide = 'BUY' | 'SELL';
@@ -58,6 +62,9 @@ export interface MutualFundHolding extends BaseEntity {
   marketValue: number;
   expenseRatio?: number;
   currency: CurrencyCode;
+  unrealizedGainLoss?: number;
+  unrealizedGainLossPercentage?: number;
+  navDate?: string;
 }
 
 // --- ETFS ---
@@ -108,6 +115,9 @@ export interface CryptoHolding extends BaseEntity {
   marketValue: number;
   currency: CurrencyCode;
   stakingYieldPercentage?: number;
+  unrealizedGainLoss?: number;
+  unrealizedGainLossPercentage?: number;
+  dayChangePercent?: number;
 }
 
 // --- PRECIOUS METALS ---
@@ -127,6 +137,8 @@ export interface PreciousMetalHolding extends BaseEntity {
   currentValue: number;
   currency: CurrencyCode;
   vaultLocation?: string;
+  unrealizedGainLoss?: number;
+  unrealizedGainLossPercentage?: number;
 }
 
 export interface AssetAllocationItem {

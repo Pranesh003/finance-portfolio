@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { Sidebar, NavItemKey } from './Sidebar';
 import { TopNavbar } from './TopNavbar';
+import { MarketTickerBar } from '../market/MarketTickerBar';
 import { Drawer } from '../ui/Drawer';
 import { QuickAddTransactionModal } from './QuickAddTransactionModal';
 import { Modal } from '../ui/Modal';
@@ -98,6 +99,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           onGlobalSearchClick={() => setIsCommandPaletteOpen(true)}
           onSelectNav={onNavChange}
         />
+
+        <MarketTickerBar />
 
         <main
           style={{

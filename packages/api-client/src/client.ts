@@ -20,6 +20,10 @@ import {
   FinancialAccount,
   FinancialTransaction,
   InvestmentPortfolio,
+  StockHolding,
+  MutualFundHolding,
+  CryptoHolding,
+  PreciousMetalHolding,
   Budget,
   NetWorthSummary,
   PaginationParams,
@@ -246,9 +250,55 @@ export class FinanceApiClient {
       })
   };
 
-  // Investments
+  // Live Market Data (AMFI, NSE/BSE, Gold/Silver, Crypto)
+  public readonly market = {
+    getIndices: () => this.request<any[]>('/api/v1/market/indices'),
+    searchMutualFunds: (query: string, limit = 20) =>
+      this.request<any[]>(`/api/v1/market/mutual-funds/search?query=${encodeURIComponent(query)}&limit=${limit}`),
+    getMutualFundByCode: (code: string) =>
+      this.request<any>(`/api/v1/market/mutual-funds/${encodeURIComponent(code)}`),
+    searchStocks: (query: string) =>
+      this.request<any[]>(`/api/v1/market/stocks/search?query=${encodeURIComponent(query)}`),
+    getStockQuote: (symbol: string) =>
+      this.request<any>(`/api/v1/market/stocks/quote/${encodeURIComponent(symbol)}`),
+    getPreciousMetals: () =>
+      this.request<any>('/api/v1/market/commodities/gold-silver'),
+    getCryptoRates: () =>
+      this.request<any[]>('/api/v1/market/crypto/rates')
+  };
+
+  // Investments & Real Holdings
   public readonly investments = {
-    listPortfolios: () => this.request<InvestmentPortfolio[]>('/api/v1/investments/portfolios')
+    getPortfolio: () => this.request<InvestmentPortfolio>('/api/v1/investments/portfolio'),
+    listPortfolios: () => this.request<InvestmentPortfolio[]>('/api/v1/investments/portfolios'),
+    getStocks: () => this.request<StockHolding[]>('/api/v1/investments/stocks'),
+    addStock: (data: any) =>
+      this.request<StockHolding>('/api/v1/investments/holdings/stock', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    getMutualFunds: () => this.request<MutualFundHolding[]>('/api/v1/investments/mutual-funds'),
+    addMutualFund: (data: any) =>
+      this.request<MutualFundHolding>('/api/v1/investments/holdings/mutual-fund', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    getCrypto: () => this.request<CryptoHolding[]>('/api/v1/investments/crypto'),
+    addCrypto: (data: any) =>
+      this.request<CryptoHolding>('/api/v1/investments/holdings/crypto', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    getPreciousMetals: () => this.request<PreciousMetalHolding[]>('/api/v1/investments/precious-metals'),
+    addPreciousMetal: (data: any) =>
+      this.request<PreciousMetalHolding>('/api/v1/investments/holdings/precious-metal', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    deleteHolding: (type: 'stock' | 'mutual-fund' | 'crypto' | 'metal', id: string) =>
+      this.request<{ success: boolean; message: string }>(`/api/v1/investments/holdings/${type}/${id}`, {
+        method: 'DELETE'
+      })
   };
 
   // Budgets

@@ -14,12 +14,9 @@ import { Table } from './components/ui/Table';
 import { Tabs } from './components/ui/Tabs';
 import { ProgressBar } from './components/ui/ProgressBar';
 import { EmptyState } from './components/ui/EmptyState';
-import { DateRangeSelector } from './components/ui/DateRangeSelector';
 import { SearchableSelect } from './components/ui/SearchableSelect';
 import { DatePicker } from './components/ui/DatePicker';
 import { FinancialMetricBadge } from './components/financial/FinancialMetricBadge';
-import { PortfolioHoldingRow, PortfolioHolding } from './components/financial/PortfolioHoldingRow';
-import { ProfitLossIndicator } from './components/financial/ProfitLossIndicator';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { RegisterScreen } from './components/auth/RegisterScreen';
 import { ForgotPasswordScreen } from './components/auth/ForgotPasswordScreen';
@@ -30,6 +27,7 @@ import { OnboardingWizard } from './components/auth/OnboardingWizard';
 import { AccountRecoveryScreen } from './components/auth/AccountRecoveryScreen';
 import { UserProfileView } from './components/user/UserProfileView';
 import { AccountSecurityView } from './components/user/AccountSecurityView';
+import { LivePortfolioView } from './components/investments/LivePortfolioView';
 import { apiClient } from './api';
 import { HealthCheckResponse } from '@finance/types';
 import {
@@ -59,7 +57,6 @@ const AppContent: React.FC = () => {
   const [activeNav, setActiveNav] = useState<NavItemKey>('overview');
   const [settingsTab, setSettingsTab] = useState<'profile' | 'security'>('profile');
   const [showFoundationModal, setShowFoundationModal] = useState<boolean>(false);
-  const [holdingTimeframe, setHoldingTimeframe] = useState<string>('ytd');
   const [selectedTxAccount, setSelectedTxAccount] = useState<string>('all');
   const [filterDate, setFilterDate] = useState<string>('');
 
@@ -103,69 +100,6 @@ const AppContent: React.FC = () => {
   if (authView === 'phone-otp') return <PhoneOtpScreen />;
   if (authView === 'onboarding') return <OnboardingWizard />;
   if (authView === 'recovery') return <AccountRecoveryScreen />;
-
-  const sampleHoldings: PortfolioHolding[] = [
-    {
-      id: 'h-1',
-      symbol: 'AAPL',
-      name: 'Apple Inc.',
-      assetClass: 'EQUITY',
-      quantity: 80,
-      costBasis: 172.50,
-      currentPrice: 230.62,
-      currentValue: 18450.00,
-      unrealizedGainLoss: 4650.00,
-      unrealizedGainLossPercentage: 33.69
-    },
-    {
-      id: 'h-2',
-      symbol: 'VOO',
-      name: 'Vanguard S&P 500 ETF',
-      assetClass: 'ETF',
-      quantity: 65,
-      costBasis: 410.00,
-      currentPrice: 447.69,
-      currentValue: 29100.00,
-      unrealizedGainLoss: 2450.00,
-      unrealizedGainLossPercentage: 9.19
-    },
-    {
-      id: 'h-3',
-      symbol: 'BTC',
-      name: 'Bitcoin (Cold Storage Vault)',
-      assetClass: 'CRYPTO',
-      quantity: 0.38,
-      costBasis: 42000.00,
-      currentPrice: 66315.78,
-      currentValue: 25200.00,
-      unrealizedGainLoss: 9240.00,
-      unrealizedGainLossPercentage: 57.90
-    },
-    {
-      id: 'h-4',
-      symbol: 'US-10Y',
-      name: 'US Treasury 10-Yr Benchmark',
-      assetClass: 'BOND',
-      quantity: 10,
-      costBasis: 1000.00,
-      currentPrice: 1005.00,
-      currentValue: 10050.00,
-      unrealizedGainLoss: 50.00,
-      unrealizedGainLossPercentage: 0.50
-    },
-    {
-      id: 'h-5',
-      symbol: 'XAU',
-      name: 'Physical Allocated Gold (Zurich)',
-      assetClass: 'PRECIOUS_METAL',
-      quantity: 2.1,
-      costBasis: 2150.00,
-      currentPrice: 2414.52,
-      currentValue: 5070.50,
-      unrealizedGainLoss: 555.50,
-      unrealizedGainLossPercentage: 12.30
-    }
-  ];
 
   // Render individual navigation view prototypes using design system components
   const renderModuleView = () => {
@@ -277,65 +211,15 @@ const AppContent: React.FC = () => {
       case 'portfolio':
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-              <div>
-                <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: colors.text.primary }}>
-                  Investment Portfolio & Assets
-                </h1>
-                <p style={{ margin: '4px 0 0 0', color: colors.text.secondary, fontSize: '13px' }}>
-                  Multi-asset performance across equities, ETFs, crypto, fixed income, and vaulted bullion.
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <DateRangeSelector
-                  value={holdingTimeframe}
-                  onChange={(val) => setHoldingTimeframe(val as string)}
-                  size="sm"
-                />
-                <Button variant="primary" size="sm" leftIcon={<Plus size={15} />}>Add Holding</Button>
-              </div>
+            <div>
+              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: colors.text.primary }}>
+                Investment Portfolio & Real-Time Assets
+              </h1>
+              <p style={{ margin: '4px 0 0 0', color: colors.text.secondary, fontSize: '13px' }}>
+                Multi-asset performance across Indian Equities, AMFI Mutual Funds, Vaulted Gold & Silver, and Crypto with live CMP valuation.
+              </p>
             </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
-              <Card title="Total Portfolio Value">
-                <div style={{ fontSize: '28px', fontWeight: 800, color: colors.text.primary }}>
-                  {formatMoney(132450.00)}
-                </div>
-                <div style={{ marginTop: '8px' }}>
-                  <ProfitLossIndicator amount={27950.00} percentage={26.75} timeframe="All Time" showBackground />
-                </div>
-              </Card>
-
-              <Card title="Daily P&L">
-                <div style={{ fontSize: '28px', fontWeight: 800, color: colors.financial.incomeText }}>
-                  +{formatMoney(1240.50)}
-                </div>
-                <div style={{ marginTop: '8px' }}>
-                  <ProfitLossIndicator amount={1240.50} percentage={0.95} timeframe="Today" showBackground />
-                </div>
-              </Card>
-
-              <Card title="Diversification Score">
-                <div style={{ fontSize: '28px', fontWeight: 800, color: colors.brand.primaryLight }}>
-                  94 / 100
-                </div>
-                <div style={{ fontSize: '12px', color: colors.text.secondary, marginTop: '8px' }}>
-                  Optimal multi-asset risk parity
-                </div>
-              </Card>
-            </div>
-
-            <Card title="Portfolio Holding Breakdown (5 Assets)">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {sampleHoldings.map((holding) => (
-                  <PortfolioHoldingRow
-                    key={holding.id}
-                    holding={holding}
-                    onClick={(h) => toast.info('Holding Selected', `${h.name} (${h.symbol}) - ${formatMoney(h.currentValue)}`)}
-                  />
-                ))}
-              </div>
-            </Card>
+            <LivePortfolioView />
           </div>
         );
 

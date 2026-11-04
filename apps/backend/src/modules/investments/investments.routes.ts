@@ -6,12 +6,14 @@ import { authenticate } from '../../core/middleware/authenticate';
 const router = Router();
 router.use(authenticate);
 
-router.get('/portfolios', async (_req: Request, res: Response, next: NextFunction) => {
+// Consolidated Portfolio with Live Valuations
+router.get('/portfolio', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const portfolios = await investmentsService.getPortfolios();
-    const response: ApiResponse<typeof portfolios> = {
+    const userId = req.user?.id || 'demo_user';
+    const portfolio = await investmentsService.getConsolidatedPortfolio(userId);
+    const response: ApiResponse<typeof portfolio> = {
       success: true,
-      data: portfolios,
+      data: portfolio,
       timestamp: new Date().toISOString()
     };
     res.json(response);
@@ -20,9 +22,11 @@ router.get('/portfolios', async (_req: Request, res: Response, next: NextFunctio
   }
 });
 
-router.get('/stocks', async (_req: Request, res: Response, next: NextFunction) => {
+// Stocks
+router.get('/stocks', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const stocks = await investmentsService.getStocks();
+    const userId = req.user?.id || 'demo_user';
+    const stocks = await investmentsService.getStocks(userId);
     const response: ApiResponse<typeof stocks> = {
       success: true,
       data: stocks,
@@ -34,9 +38,27 @@ router.get('/stocks', async (_req: Request, res: Response, next: NextFunction) =
   }
 });
 
-router.get('/mutual-funds', async (_req: Request, res: Response, next: NextFunction) => {
+router.post('/holdings/stock', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const mutualFunds = await investmentsService.getMutualFunds();
+    const userId = req.user?.id || 'demo_user';
+    const holding = await investmentsService.addStock(userId, req.body);
+    const response: ApiResponse<typeof holding> = {
+      success: true,
+      message: 'Stock holding added successfully',
+      data: holding,
+      timestamp: new Date().toISOString()
+    };
+    res.status(201).json(response);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Mutual Funds
+router.get('/mutual-funds', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id || 'demo_user';
+    const mutualFunds = await investmentsService.getMutualFunds(userId);
     const response: ApiResponse<typeof mutualFunds> = {
       success: true,
       data: mutualFunds,
@@ -48,37 +70,27 @@ router.get('/mutual-funds', async (_req: Request, res: Response, next: NextFunct
   }
 });
 
-router.get('/etfs', async (_req: Request, res: Response, next: NextFunction) => {
+router.post('/holdings/mutual-fund', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const etfs = await investmentsService.getETFs();
-    const response: ApiResponse<typeof etfs> = {
+    const userId = req.user?.id || 'demo_user';
+    const holding = await investmentsService.addMutualFund(userId, req.body);
+    const response: ApiResponse<typeof holding> = {
       success: true,
-      data: etfs,
+      message: 'Mutual fund holding added successfully',
+      data: holding,
       timestamp: new Date().toISOString()
     };
-    res.json(response);
+    res.status(201).json(response);
   } catch (err) {
     next(err);
   }
 });
 
-router.get('/bonds', async (_req: Request, res: Response, next: NextFunction) => {
+// Crypto
+router.get('/crypto', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const bonds = await investmentsService.getBonds();
-    const response: ApiResponse<typeof bonds> = {
-      success: true,
-      data: bonds,
-      timestamp: new Date().toISOString()
-    };
-    res.json(response);
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.get('/crypto', async (_req: Request, res: Response, next: NextFunction) => {
-  try {
-    const crypto = await investmentsService.getCrypto();
+    const userId = req.user?.id || 'demo_user';
+    const crypto = await investmentsService.getCrypto(userId);
     const response: ApiResponse<typeof crypto> = {
       success: true,
       data: crypto,
@@ -90,9 +102,27 @@ router.get('/crypto', async (_req: Request, res: Response, next: NextFunction) =
   }
 });
 
-router.get('/precious-metals', async (_req: Request, res: Response, next: NextFunction) => {
+router.post('/holdings/crypto', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const metals = await investmentsService.getPreciousMetals();
+    const userId = req.user?.id || 'demo_user';
+    const holding = await investmentsService.addCrypto(userId, req.body);
+    const response: ApiResponse<typeof holding> = {
+      success: true,
+      message: 'Crypto holding added successfully',
+      data: holding,
+      timestamp: new Date().toISOString()
+    };
+    res.status(201).json(response);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Precious Metals
+router.get('/precious-metals', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id || 'demo_user';
+    const metals = await investmentsService.getPreciousMetals(userId);
     const response: ApiResponse<typeof metals> = {
       success: true,
       data: metals,
@@ -104,5 +134,37 @@ router.get('/precious-metals', async (_req: Request, res: Response, next: NextFu
   }
 });
 
-export const investmentsRouter = router;
+router.post('/holdings/precious-metal', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id || 'demo_user';
+    const holding = await investmentsService.addPreciousMetal(userId, req.body);
+    const response: ApiResponse<typeof holding> = {
+      success: true,
+      message: 'Precious metal holding added successfully',
+      data: holding,
+      timestamp: new Date().toISOString()
+    };
+    res.status(201).json(response);
+  } catch (err) {
+    next(err);
+  }
+});
 
+// Delete Holding
+router.delete('/holdings/:type/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id || 'demo_user';
+    const type = req.params.type as 'stock' | 'mutual-fund' | 'crypto' | 'metal';
+    const id = String(req.params.id || '');
+    const success = await investmentsService.deleteHolding(userId, type, id);
+    res.json({
+      success,
+      message: success ? 'Holding deleted successfully' : 'Failed to delete holding',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+export const investmentsRouter = router;

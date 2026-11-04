@@ -6,9 +6,10 @@ import { authenticate } from '../../core/middleware/authenticate';
 const router = Router();
 router.use(authenticate);
 
-router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const crypto = await investmentsService.getCrypto();
+    const userId = req.user?.id || 'demo_user';
+    const crypto = await investmentsService.getCrypto(userId);
     const response: ApiResponse<CryptoHolding[]> = {
       success: true,
       data: crypto,
