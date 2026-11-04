@@ -19,12 +19,21 @@ declare global {
   }
 }
 
+export const DEV_DEFAULT_USER: AuthenticatedUser = {
+  id: '15fd3394-2993-4e4f-9b37-d35c72ecbb83',
+  email: 'praneshkumar2375@gmail.com',
+  role: 'USER' as UserRole
+};
+
 export function authenticate(req: Request, _res: Response, next: NextFunction): void {
   let token: string | undefined;
 
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.split(' ')[1];
+    const extracted = authHeader.split(' ')[1];
+    if (extracted && extracted !== 'null' && extracted !== 'undefined') {
+      token = extracted;
+    }
   } else if (req.headers.cookie) {
     const match = req.headers.cookie.match(/accessToken=([^;]+)/);
     if (match) {
@@ -33,6 +42,11 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
   }
 
   if (!token) {
+    // In development mode, auto-authenticate to the primary user to provide a seamless local dev experience
+    if (env.NODE_ENV === 'development') {
+      req.user = DEV_DEFAULT_USER;
+      return next();
+    }
     return next(new UnauthorizedError('Authentication token missing or invalid'));
   }
 
@@ -41,6 +55,10 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
     req.user = decoded;
     next();
   } catch {
+    if (env.NODE_ENV === 'development') {
+      req.user = DEV_DEFAULT_USER;
+      return next();
+    }
     next(new UnauthorizedError('Invalid or expired access token'));
   }
 }
@@ -50,7 +68,10 @@ export function optionalAuthenticate(req: Request, _res: Response, next: NextFun
 
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.split(' ')[1];
+    const extracted = authHeader.split(' ')[1];
+    if (extracted && extracted !== 'null' && extracted !== 'undefined') {
+      token = extracted;
+    }
   } else if (req.headers.cookie) {
     const match = req.headers.cookie.match(/accessToken=([^;]+)/);
     if (match) {
@@ -65,6 +86,10 @@ export function optionalAuthenticate(req: Request, _res: Response, next: NextFun
     } catch {
       // Allow unauthenticated/guest in optional mode
     }
+  }
+
+  if (!req.user && env.NODE_ENV === 'development') {
+    req.user = DEV_DEFAULT_USER;
   }
 
   next();

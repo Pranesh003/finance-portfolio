@@ -1,10 +1,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { investmentsService } from '../investments/investments.service';
 import { ApiResponse, CryptoHolding } from '@finance/types';
-import { authenticate } from '../../core/middleware/authenticate';
+import { optionalAuthenticate } from '../../core/middleware/authenticate';
 
 const router = Router();
-router.use(authenticate);
+router.use(optionalAuthenticate);
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {

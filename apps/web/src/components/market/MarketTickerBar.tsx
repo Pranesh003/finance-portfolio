@@ -123,3 +123,4 @@ export const MarketTickerBar: React.FC = () => {
     </div>
   );
 };
+

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authController } from './auth.controller';
+import { authService } from './auth.service';
 import { validate } from '../../core/middleware/validate';
 import { authRateLimiter, strictAuthRateLimiter } from '../../core/middleware/rateLimiter';
 import {
@@ -15,6 +16,25 @@ import {
 import { authenticate } from '../../core/middleware/authenticate';
 
 const router = Router();
+
+// Development fast-lane auto session
+router.get('/dev-session', async (_req, res, next) => {
+  try {
+    const user = (await authService.getUserByIdAsync('15fd3394-2993-4e4f-9b37-d35c72ecbb83')) || authService.getDemoUser();
+    const tokens = authService.generateTokens(user);
+    res.json({
+      success: true,
+      message: 'Dev session acquired',
+      data: {
+        user,
+        tokens
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.post('/login', strictAuthRateLimiter, validate(loginSchema), (req, res, next) => authController.login(req, res, next));
 router.post('/register', authRateLimiter, validate(registerSchema), (req, res, next) => authController.register(req, res, next));

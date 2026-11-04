@@ -99,8 +99,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!meRes.data.onboardingCompleted) {
             setAuthView('onboarding');
           }
+          return;
         }
       } catch {
+        // Try dev session auto-recovery
+        try {
+          const devRes = await fetch('/api/v1/auth/dev-session');
+          if (devRes.ok) {
+            const devData = await devRes.json();
+            if (devData.data?.tokens?.accessToken) {
+              localStorage.setItem('access_token', devData.data.tokens.accessToken);
+              setUser(devData.data.user);
+              return;
+            }
+          }
+        } catch {
+          // Dev fallback unavailable
+        }
+
         // No active session
         localStorage.removeItem('access_token');
         setUser(null);

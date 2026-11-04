@@ -21,3 +21,4 @@ router.get('/commodities/gold-silver', marketController.getPreciousMetals.bind(m
 router.get('/crypto/rates', marketController.getCryptoRates.bind(marketController));
 
 export default router;
+
