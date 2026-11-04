@@ -284,3 +284,64 @@ Run the complete 14-test suite covering registration, duplicate email rejection,
 npm run test:auth --workspace=@finance/backend
 ```
 
+---
+
+## 📊 Step 04: Main Financial Dashboard (Command Center)
+
+The Main Financial Dashboard (`WealthFlow Command Center`) serves as the central 360° overview of a user's entire financial life, powered by dynamic backend aggregation services and institutional mathematical calculation models.
+
+### 1. Dashboard Architecture & Key Features
+- **Personalized Header & Period Controls**: Dynamic time-of-day greeting, locale-formatted date (`en-IN`), live engine status badge, period selector (`7D`, `30D`, `3M`, `6M`, `1Y`, `3Y`, `5Y`, `ALL`), and multi-currency conversion (`INR (₹)` default, `USD`, `EUR`, `GBP`, `AED`, `SGD`).
+- **Total Net Worth Hero Section**:
+  - Net Worth calculation formula: `Net Worth = Total Assets - Total Liabilities`.
+  - Absolute & percentage change badges with upward/downward trajectory indicators.
+  - Interactive Historical Growth SVG Area Chart with hover inspection and financial event markers (e.g. Salary appraisal, Performance bonus, Market rally).
+- **9 Dedicated Domain-Linked Summary Cards**:
+  1. `Total Assets` (routes to `/assets`)
+  2. `Total Liabilities` (routes to `/liabilities`)
+  3. `Bank Balances` (routes to `/accounts`)
+  4. `Available Cash` (routes to `/accounts`)
+  5. `Total Investments` (routes to `/investments`)
+  6. `Monthly Income` (routes to `/income`)
+  7. `Monthly Expenses` (routes to `/expenses`)
+  8. `Monthly Savings` (routes to `/budgets`)
+  9. `Passive Income` (routes to `/investments`)
+- **Asset Allocation by Class**: Interactive SVG Donut chart displaying 9 multi-asset classes: Indian Equities, US/Global Stocks, Mutual Funds, ETFs, Bonds, Fixed Deposits, Gold Bullion & SGBs, Crypto, and Real Estate.
+- **Liability & Debt Distribution**: Amortized loans (Home loan, Auto loan) and credit card balances with APR rates, monthly EMI burdens, and progress indicators.
+- **Cash Flow Dynamics Chart**: Grouped visual bars comparing 4 cash streams (Income, Living Expenses, Systematic Investments, Retained Savings) across Daily, Weekly, Monthly, Quarterly, and Yearly groupings.
+- **Portfolio Performance Widget**: Real-time valuation matrix showing Total Invested Capital, Current Market Value, Realized P&L, Unrealized P&L (amount & %), Day's P&L, and Overall Portfolio ROI (%).
+- **Connected Accounts Overview**: Depository checking, savings, brokerage Demat, credit lines, and cash vaults with institution name, balance, and sync status.
+- **Recent Transactions Ledger**: Filterable by `All`, `Income`, `Expenses`, `Transfers`, and `Investments` with category badges and reconciliation status.
+- **Monthly Spending & Budget Caps**: Envelope tracking against predefined limits with color thresholds (green `<80%`, orange `80-100%`, red `>100%`) and comparisons with the previous month.
+- **7 Institutional Financial Health Ratios**:
+  1. *Savings Rate*: `(Monthly Savings + Investments) / Gross Income * 100` (Benchmark: `≥ 25%`)
+  2. *Expense-to-Income*: `Monthly Expenses / Gross Income * 100` (Benchmark: `≤ 50%`)
+  3. *Debt-to-Asset*: `Total Liabilities / Total Assets * 100` (Benchmark: `≤ 30%`)
+  4. *Emergency Fund Coverage*: `Liquid Reserves / Monthly Expenses` (Benchmark: `6.0 months`)
+  5. *Liquidity Ratio*: `Liquid Cash / Monthly Obligations` (Benchmark: `≥ 2.5x`)
+  6. *Investment Diversification Score*: `Normalized Inverse HHI across 9 asset classes` (Benchmark: `≥ 75/100`)
+  7. *Debt-to-Income (DTI)*: `Monthly Debt EMIs / Gross Monthly Income * 100` (Benchmark: `≤ 36%`)
+- **Upcoming Financial Schedule**: Timeline tracking recurring salary credits, SIP installments, EMI auto-debits, bill maturities, and card due dates.
+- **Proactive Intelligence Feed**: AI/rule-based anomaly detection highlighting spending surges, rebalancing triggers, and credit dues.
+- **Quick-Add Financial Modal**: In-place creation of `Expense`, `Income`, `Transfer`, `Investment`, `Asset`, and `Liability` without navigating away.
+- **Customization Mode & Preferences**: Reorder widgets, toggle visibility of any module, reset to zero baseline, or seed demonstration portfolios with backend persistence (`/api/v1/dashboard/preferences`).
+
+### 2. Double-Counting Prevention Engine
+To maintain accounting integrity, the engine strictly prevents double-counting:
+- **Internal Transfers (`TRANSFER`)**: Moving money between user accounts updates account balances but never inflates income, expenses, or net worth.
+- **Investment Purchases (`INVESTMENT`)**: Purchasing equities or funds reduces cash and increases asset value by the identical sum, keeping net worth unchanged.
+
+### 3. Verification & Testing
+
+Run the dashboard test suite:
+
+```bash
+npm run test:dashboard --workspace=@finance/backend
+```
+
+Run all verification suites (Auth + Dashboard):
+
+```bash
+npm run test --workspace=@finance/backend
+```
+

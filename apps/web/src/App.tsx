@@ -171,7 +171,7 @@ const AppContent: React.FC = () => {
   const renderModuleView = () => {
     switch (activeNav) {
       case 'overview':
-        return <DashboardOverview />;
+        return <DashboardOverview onNavigate={(key) => setActiveNav(key)} />;
 
       case 'settings':
         return (

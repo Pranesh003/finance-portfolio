@@ -45,6 +45,31 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
   }
 }
 
+export function optionalAuthenticate(req: Request, _res: Response, next: NextFunction): void {
+  let token: string | undefined;
+
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.headers.cookie) {
+    const match = req.headers.cookie.match(/accessToken=([^;]+)/);
+    if (match) {
+      token = match[1];
+    }
+  }
+
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, env.JWT_SECRET) as AuthenticatedUser;
+      req.user = decoded;
+    } catch {
+      // Allow unauthenticated/guest in optional mode
+    }
+  }
+
+  next();
+}
+
 export function authorize(...allowedRoles: UserRole[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {

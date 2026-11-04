@@ -203,3 +203,44 @@ export function calculateEmergencyFundRunway(
   return Math.round((liquidCash / averageMonthlyExpenses) * 10) / 10;
 }
 
+/**
+ * Expense-to-Income ratio percentage
+ */
+export function calculateExpenseToIncome(monthlyExpenses: number, monthlyIncome: number): number {
+  if (monthlyIncome <= 0) return 0;
+  return Math.round((monthlyExpenses / monthlyIncome) * 10000) / 100;
+}
+
+/**
+ * Debt-to-Asset ratio percentage
+ */
+export function calculateDebtToAsset(totalLiabilities: number, totalAssets: number): number {
+  if (totalAssets <= 0) return 0;
+  return Math.round((totalLiabilities / totalAssets) * 10000) / 100;
+}
+
+/**
+ * Liquidity ratio (Liquid Assets / Monthly Expenses)
+ */
+export function calculateLiquidityRatio(liquidAssets: number, monthlyExpenses: number): number {
+  if (monthlyExpenses <= 0) return 0;
+  return Math.round((liquidAssets / monthlyExpenses) * 100) / 100;
+}
+
+/**
+ * Investment Diversification Score (0 to 100)
+ * Uses normalized inverse Herfindahl-Hirschman concentration across asset classes
+ */
+export function calculateDiversificationScore(assetWeightsPercentage: number[]): number {
+  if (!assetWeightsPercentage || assetWeightsPercentage.length === 0) return 0;
+  const filtered = assetWeightsPercentage.filter((w) => w > 0);
+  if (filtered.length <= 1) return filtered.length === 1 ? 25 : 0;
+
+  // Sum of squared weights (HHI scale 0 to 10000)
+  const hhi = filtered.reduce((acc, w) => acc + Math.pow(w, 2), 0);
+  // Ideal even spread for N classes would be 10000 / N
+  // Invert HHI: lower concentration = higher diversification score
+  const rawScore = 100 - (hhi / 100);
+  return Math.max(10, Math.min(100, Math.round(rawScore)));
+}
+

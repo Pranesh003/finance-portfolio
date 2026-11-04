@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authRouter } from '../modules/auth/auth.routes';
 import { usersRouter } from '../modules/users/users.routes';
+import { dashboardRouter } from '../modules/dashboard/dashboard.routes';
 import { bankingRouter } from '../modules/banking/banking.routes';
 import { accountsRouter } from '../modules/accounts/accounts.routes';
 import { transactionsRouter } from '../modules/transactions/transactions.routes';
@@ -28,6 +29,7 @@ const router = Router();
 
 router.use('/auth', authRouter);
 router.use('/users', usersRouter);
+router.use('/dashboard', dashboardRouter);
 router.use('/banking', bankingRouter);
 router.use('/accounts', accountsRouter);
 router.use('/transactions', transactionsRouter);

@@ -22,7 +22,21 @@ import {
   InvestmentPortfolio,
   Budget,
   NetWorthSummary,
-  PaginationParams
+  PaginationParams,
+  DashboardSummary,
+  NetWorthHistoryPoint,
+  DashboardAssetAllocationItem,
+  LiabilityAllocationItem,
+  CashFlowDataPoint,
+  PortfolioSummary,
+  AccountOverviewItem,
+  RecentTransactionItem,
+  SpendingCategoryItem,
+  FinancialHealthOverview,
+  UpcomingFinancialEvent,
+  DashboardFinancialInsight,
+  DashboardPreferences,
+  QuickAddPayload
 } from '@finance/types';
 
 export interface ApiClientConfig {
@@ -245,6 +259,54 @@ export class FinanceApiClient {
   // Analytics
   public readonly analytics = {
     getNetWorth: () => this.request<NetWorthSummary>('/api/v1/analytics/net-worth')
+  };
+
+  // Dashboard Aggregation Engine
+  public readonly dashboard = {
+    getSummary: (period = '30d', currency = 'INR') =>
+      this.request<DashboardSummary>(`/api/v1/dashboard/summary?period=${period}&currency=${currency}`),
+    getNetWorthHistory: (period = '30d', currency = 'INR') =>
+      this.request<NetWorthHistoryPoint[]>(`/api/v1/dashboard/net-worth-history?period=${period}&currency=${currency}`),
+    getAssetAllocation: (currency = 'INR') =>
+      this.request<DashboardAssetAllocationItem[]>(`/api/v1/dashboard/asset-allocation?currency=${currency}`),
+    getLiabilityAllocation: (currency = 'INR') =>
+      this.request<LiabilityAllocationItem[]>(`/api/v1/dashboard/liability-allocation?currency=${currency}`),
+    getCashFlow: (grouping = 'monthly', currency = 'INR') =>
+      this.request<CashFlowDataPoint[]>(`/api/v1/dashboard/cash-flow?grouping=${grouping}&currency=${currency}`),
+    getPortfolioSummary: (currency = 'INR') =>
+      this.request<PortfolioSummary>(`/api/v1/dashboard/portfolio-summary?currency=${currency}`),
+    getAccounts: (currency = 'INR') =>
+      this.request<AccountOverviewItem[]>(`/api/v1/dashboard/accounts?currency=${currency}`),
+    getRecentTransactions: (limit = 10, type = 'all', currency = 'INR') =>
+      this.request<RecentTransactionItem[]>(`/api/v1/dashboard/transactions?limit=${limit}&type=${type}&currency=${currency}`),
+    getSpendingBreakdown: (currency = 'INR') =>
+      this.request<SpendingCategoryItem[]>(`/api/v1/dashboard/spending-breakdown?currency=${currency}`),
+    getFinancialHealth: (currency = 'INR') =>
+      this.request<FinancialHealthOverview>(`/api/v1/dashboard/financial-health?currency=${currency}`),
+    getUpcomingEvents: () =>
+      this.request<UpcomingFinancialEvent[]>('/api/v1/dashboard/upcoming-events'),
+    getInsights: (currency = 'INR') =>
+      this.request<DashboardFinancialInsight[]>(`/api/v1/dashboard/insights?currency=${currency}`),
+    quickAdd: (payload: QuickAddPayload) =>
+      this.request<{ success: boolean; message: string; recordId: string }>('/api/v1/dashboard/quick-add', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }),
+    getPreferences: () =>
+      this.request<DashboardPreferences>('/api/v1/dashboard/preferences'),
+    updatePreferences: (prefs: Partial<DashboardPreferences>) =>
+      this.request<DashboardPreferences>('/api/v1/dashboard/preferences', {
+        method: 'PUT',
+        body: JSON.stringify(prefs)
+      }),
+    resetData: () =>
+      this.request<{ success: boolean; message: string }>('/api/v1/dashboard/reset', {
+        method: 'POST'
+      }),
+    seedSampleData: () =>
+      this.request<{ success: boolean; message: string }>('/api/v1/dashboard/seed', {
+        method: 'POST'
+      })
   };
 }
 

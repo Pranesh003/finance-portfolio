@@ -11,4 +11,5 @@ export * from './notifications';
 export * from './integrations';
 export * from './documents';
 export * from './ai';
+export * from './dashboard';
 
