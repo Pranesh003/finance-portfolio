@@ -36,11 +36,16 @@ interface ModuleOption {
 
 export const OnboardingWizard: React.FC = () => {
   const { colors } = useTheme();
-  const { user, submitOnboarding } = useAuth();
+  const { user, submitOnboarding, setAuthView } = useAuth();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const totalSteps = 4;
   const [loading, setLoading] = useState<boolean>(false);
+
+  const handleSkip = () => {
+    localStorage.setItem('skip_onboarding', 'true');
+    setAuthView(null);
+  };
 
   // Step state
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>(
@@ -137,6 +142,11 @@ export const OnboardingWizard: React.FC = () => {
         workspaceType,
         initialGoal: goalTitle && goalAmount ? { title: goalTitle, targetAmount: Number(goalAmount) } : undefined
       });
+      localStorage.setItem('skip_onboarding', 'true');
+      setAuthView(null);
+    } catch {
+      localStorage.setItem('skip_onboarding', 'true');
+      setAuthView(null);
     } finally {
       setLoading(false);
     }
@@ -169,6 +179,28 @@ export const OnboardingWizard: React.FC = () => {
           boxSizing: 'border-box'
         }}
       >
+        {/* Skip to Dashboard link */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+          <button
+            onClick={handleSkip}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: colors.brand.primaryLight,
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              borderRadius: '6px'
+            }}
+          >
+            Skip to Dashboard &rarr;
+          </button>
+        </div>
+
         {/* Progress Bar Header */}
         <div style={{ marginBottom: '28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -237,7 +269,15 @@ export const OnboardingWizard: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Button
+                variant="ghost"
+                size="md"
+                onClick={handleSkip}
+                style={{ color: colors.text.secondary }}
+              >
+                Skip & Enter Dashboard
+              </Button>
               <Button
                 variant="primary"
                 size="md"

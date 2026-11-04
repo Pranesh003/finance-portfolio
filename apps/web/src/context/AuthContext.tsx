@@ -74,13 +74,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const storedToken = localStorage.getItem('access_token');
+      const skipOnboarding = localStorage.getItem('skip_onboarding') === 'true';
+
       if (storedToken) {
         try {
           const res = await apiClient.auth.me();
           if (res.data) {
             setUser(res.data);
-            if (!res.data.onboardingCompleted) {
+            if (!res.data.onboardingCompleted && !skipOnboarding) {
               setAuthView('onboarding');
+            } else {
+              setAuthView(null);
             }
             return;
           }
@@ -96,8 +100,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem('access_token', refreshRes.data.accessToken);
           const meRes = await apiClient.auth.me();
           setUser(meRes.data);
-          if (!meRes.data.onboardingCompleted) {
+          if (!meRes.data.onboardingCompleted && !skipOnboarding) {
             setAuthView('onboarding');
+          } else {
+            setAuthView(null);
           }
           return;
         }
@@ -110,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (devData.data?.tokens?.accessToken) {
               localStorage.setItem('access_token', devData.data.tokens.accessToken);
               setUser(devData.data.user);
+              setAuthView(null);
               return;
             }
           }
@@ -120,6 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // No active session
         localStorage.removeItem('access_token');
         setUser(null);
+        setAuthView(null);
       }
     } finally {
       setIsLoading(false);

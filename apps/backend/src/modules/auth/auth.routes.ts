@@ -21,6 +21,9 @@ const router = Router();
 router.get('/dev-session', async (_req, res, next) => {
   try {
     const user = (await authService.getUserByIdAsync('15fd3394-2993-4e4f-9b37-d35c72ecbb83')) || authService.getDemoUser();
+    if (user) {
+      user.onboardingCompleted = true;
+    }
     const tokens = authService.generateTokens(user);
     res.json({
       success: true,
