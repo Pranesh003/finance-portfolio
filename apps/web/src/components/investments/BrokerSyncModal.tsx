@@ -22,10 +22,13 @@ interface BrokerSyncModalProps {
 export const BrokerSyncModal: React.FC<BrokerSyncModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const { colors } = useTheme();
 
-  const [activeBroker, setActiveBroker] = useState<'ANGEL_ONE' | 'ZERODHA' | 'MF_CENTRAL'>('ANGEL_ONE');
+  const [activeBroker, setActiveBroker] = useState<'IND_MONEY' | 'ANGEL_ONE' | 'ZERODHA' | 'MF_CENTRAL'>('IND_MONEY');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successResult, setSuccessResult] = useState<any | null>(null);
+
+  // INDmoney Form
+  const [indMoneyText, setIndMoneyText] = useState('');
 
   // Angel One Form
   const [angelClientCode, setAngelClientCode] = useState('');
@@ -52,7 +55,13 @@ export const BrokerSyncModal: React.FC<BrokerSyncModalProps> = ({ isOpen, onClos
     try {
       let res: any;
 
-      if (activeBroker === 'ANGEL_ONE') {
+      if (activeBroker === 'IND_MONEY') {
+        res = await apiClient.investments.syncIndMoney({
+          rawText: indMoneyText,
+          jsonPayload: indMoneyText.trim().startsWith('{') || indMoneyText.trim().startsWith('[') ? indMoneyText : undefined,
+          isDemo
+        });
+      } else if (activeBroker === 'ANGEL_ONE') {
         if (!isDemo && (!angelClientCode || !angelApiKey)) {
           throw new Error('Please enter your Angel One Client Code & SmartAPI Key (or click 1-Click Test Demo)');
         }
@@ -186,9 +195,10 @@ export const BrokerSyncModal: React.FC<BrokerSyncModalProps> = ({ isOpen, onClos
           }}
         >
           {[
+            { id: 'IND_MONEY', label: 'INDmoney (Net Worth Sync)', color: '#10B981' },
             { id: 'ANGEL_ONE', label: 'Angel One (SmartAPI)', color: '#3B82F6' },
             { id: 'ZERODHA', label: 'Zerodha (Kite)', color: '#F97316' },
-            { id: 'MF_CENTRAL', label: 'MFCentral (All Mutual Funds)', color: '#10B981' }
+            { id: 'MF_CENTRAL', label: 'MFCentral (Mutual Funds)', color: '#8B5CF6' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -256,6 +266,85 @@ export const BrokerSyncModal: React.FC<BrokerSyncModalProps> = ({ isOpen, onClos
                 Imported <b>{successResult.stocksImported + successResult.mutualFundsImported} holdings</b> with total valuation of{' '}
                 <b>₹{Number(successResult.totalSyncedValue).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</b>.
               </div>
+            </div>
+          )}
+
+          {/* INDMONEY TAB */}
+          {activeBroker === 'IND_MONEY' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div
+                style={{
+                  padding: '16px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#10B981' }}>
+                    Sync Net Worth & Portfolios via INDmoney
+                  </div>
+                  <div style={{ fontSize: '12px', color: colors.text.secondary, marginTop: '2px' }}>
+                    Imports all Indian stocks (Angel One + Zerodha) and mutual funds already tracked in your INDmoney
+                  </div>
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => handleSync(true)}
+                  isLoading={loading}
+                  style={{ fontWeight: 700, backgroundColor: '#10B981', color: '#FFFFFF', whiteSpace: 'nowrap' }}
+                >
+                  <Sparkles size={14} style={{ marginRight: '6px' }} />
+                  1-Click Test Demo
+                </Button>
+              </div>
+
+              {/* Step by step guide card */}
+              <div
+                style={{
+                  backgroundColor: colors.bg.surfaceElevated,
+                  borderRadius: '10px',
+                  padding: '14px 18px',
+                  border: `1px solid ${colors.border.subtle}`,
+                  fontSize: '12px'
+                }}
+              >
+                <div style={{ fontWeight: 700, color: colors.text.primary, marginBottom: '6px' }}>
+                  📌 Simple 3-Step Process:
+                </div>
+                <ol style={{ margin: 0, paddingLeft: '18px', color: colors.text.secondary, lineHeight: 1.6 }}>
+                  <li>Open the <b>INDmoney app</b> on your mobile phone or browser.</li>
+                  <li>Go to <b>Net Worth</b> / <b>Investments</b> → tap <b>"Download Statement"</b> or copy your holdings text.</li>
+                  <li>Paste the text or MCP JSON below and click <b>Sync</b> (or click <b>"1-Click Test Demo"</b> above).</li>
+                </ol>
+              </div>
+
+              <FormField
+                label="Paste INDmoney Text, Holdings CSV, or MCP Output"
+                helperText="Paste your exported text or JSON from INDmoney / MCP"
+              >
+                <textarea
+                  rows={6}
+                  value={indMoneyText}
+                  onChange={(e) => setIndMoneyText(e.target.value)}
+                  placeholder="Paste your INDmoney holdings, statement text, or MCP JSON here..."
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: colors.bg.surfaceElevated,
+                    border: `1px solid ${colors.border.default}`,
+                    borderRadius: '8px',
+                    color: colors.text.primary,
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </FormField>
             </div>
           )}
 
@@ -501,7 +590,7 @@ export const BrokerSyncModal: React.FC<BrokerSyncModalProps> = ({ isOpen, onClos
             isLoading={loading}
             style={{ fontWeight: 700 }}
           >
-            Sync Live {activeBroker === 'ANGEL_ONE' ? 'Angel One' : activeBroker === 'ZERODHA' ? 'Zerodha' : 'MFCentral'} Holdings &rarr;
+            Sync Live {activeBroker === 'IND_MONEY' ? 'INDmoney' : activeBroker === 'ANGEL_ONE' ? 'Angel One' : activeBroker === 'ZERODHA' ? 'Zerodha' : 'MFCentral'} Holdings &rarr;
           </Button>
         </div>
       </div>

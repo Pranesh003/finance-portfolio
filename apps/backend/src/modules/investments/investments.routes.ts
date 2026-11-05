@@ -313,4 +313,21 @@ router.post('/brokers/mf-central/sync', async (req: Request, res: Response, next
   }
 });
 
+// 4. INDmoney (All-in-One Net Worth & Consolidated Portfolios)
+router.post('/brokers/indmoney/sync', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = await getEffectiveUserId(req);
+    const { rawText, jsonPayload, isDemo } = req.body;
+    const result = await brokerSyncService.syncIndMoney(userId, { rawText, jsonPayload }, !!isDemo);
+    res.json({
+      success: true,
+      message: `Synced ${result.stocksImported} stocks and ${result.mutualFundsImported} mutual funds from INDmoney!`,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export const investmentsRouter = router;

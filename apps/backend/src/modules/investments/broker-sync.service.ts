@@ -24,7 +24,7 @@ export interface MfCentralSyncPayload {
 }
 
 export interface BrokerSyncResult {
-  broker: 'ANGEL_ONE' | 'ZERODHA' | 'MF_CENTRAL' | 'GROWW' | 'UPSTOX';
+  broker: 'ANGEL_ONE' | 'ZERODHA' | 'MF_CENTRAL' | 'GROWW' | 'UPSTOX' | 'IND_MONEY';
   stocksImported: number;
   mutualFundsImported: number;
   totalSyncedValue: number;
@@ -385,6 +385,144 @@ export class BrokerSyncService {
       holdings: holdingsSummary
     };
   }
+
+  /**
+   * Sync complete net worth & holdings from INDmoney (MCP JSON, CSV/Text, or Demo)
+   */
+  public async syncIndMoney(
+    userId: string,
+    payload: { rawText?: string; jsonPayload?: string },
+    isDemo = false
+  ): Promise<BrokerSyncResult> {
+    const portfolioId = await investmentsService.getOrCreateUserPortfolio(userId);
+    let items: Array<{
+      name: string;
+      tickerOrScheme?: string;
+      isin?: string;
+      quantity: number;
+      price: number;
+      type: 'STOCK' | 'MUTUAL_FUND';
+    }> = [];
+
+    await marketDataService.loadAmfiNavData();
+
+    if (isDemo || (!payload.rawText && !payload.jsonPayload)) {
+      items = [
+        { name: 'Tata Motors Ltd', tickerOrScheme: 'TATAMOTORS.NS', isin: 'INE155A01022', quantity: 45, price: 785.00, type: 'STOCK' },
+        { name: 'State Bank of India', tickerOrScheme: 'SBIN.NS', isin: 'INE062A01020', quantity: 35, price: 812.50, type: 'STOCK' },
+        { name: 'Reliance Industries Ltd', tickerOrScheme: 'RELIANCE.NS', isin: 'INE002A01018', quantity: 20, price: 1311.00, type: 'STOCK' },
+        { name: 'HDFC Bank Ltd', tickerOrScheme: 'HDFCBANK.NS', isin: 'INE040A01034', quantity: 30, price: 1742.00, type: 'STOCK' },
+        { name: 'Infosys Ltd', tickerOrScheme: 'INFY.NS', isin: 'INE009A01021', quantity: 25, price: 1622.00, type: 'STOCK' },
+        { name: 'Parag Parikh Flexi Cap Fund', tickerOrScheme: 'INF879O01027', isin: 'INF879O01027', quantity: 210.45, price: 75.80, type: 'MUTUAL_FUND' },
+        { name: 'Nippon India Small Cap Fund', tickerOrScheme: 'INF204K01W66', isin: 'INF204K01W66', quantity: 185.30, price: 172.40, type: 'MUTUAL_FUND' },
+        { name: 'Mirae Asset Large Cap Fund', tickerOrScheme: 'INF769K01168', isin: 'INF769K01168', quantity: 340.00, price: 114.50, type: 'MUTUAL_FUND' }
+      ];
+    } else if (payload.jsonPayload) {
+      try {
+        const parsed = JSON.parse(payload.jsonPayload);
+        const list = Array.isArray(parsed) ? parsed : (parsed.holdings || parsed.investments || parsed.stocks || []);
+        items = list.map((l: any) => ({
+          name: l.name || l.companyName || l.stockName || l.schemeName || 'Security',
+          tickerOrScheme: l.ticker || l.symbol || l.schemeCode,
+          isin: l.isin,
+          quantity: Number(l.quantity || l.units || l.shares || 1),
+          price: Number(l.price || l.currentPrice || l.nav || l.avgPrice || 100),
+          type: (l.type === 'MUTUAL_FUND' || String(l.isin || '').startsWith('INF')) ? 'MUTUAL_FUND' : 'STOCK'
+        }));
+      } catch (err: any) {
+        throw new Error(`Failed to parse INDmoney JSON: ${err.message}`);
+      }
+    } else if (payload.rawText) {
+      const lines = payload.rawText.split('\n');
+      for (const line of lines) {
+        const isinMatch = line.match(/\b(IN[EF][0-9A-Z]{9})\b/i);
+        const numbers = line.match(/\b\d+(?:\.\d+)?\b/g)?.map(Number) || [];
+        if (isinMatch && isinMatch[1] && numbers.length > 0) {
+          const isin = isinMatch[1].toUpperCase();
+          const isMf = isin.startsWith('INF');
+          const resolved = resolveIsinToTicker(isin);
+          const qty = numbers.find((n) => n > 0 && n <= 10000) || 1;
+          const price = numbers.find((n) => n > 10 && n !== qty) || 100;
+          items.push({
+            name: resolved.name,
+            tickerOrScheme: isMf ? isin : resolved.ticker,
+            isin,
+            quantity: qty,
+            price,
+            type: isMf ? 'MUTUAL_FUND' : 'STOCK'
+          });
+        }
+      }
+    }
+
+    let totalSyncedValue = 0;
+    let stocksImported = 0;
+    let mutualFundsImported = 0;
+    const holdingsSummary: BrokerSyncResult['holdings'] = [];
+
+    for (const item of items) {
+      const mktVal = Number((item.quantity * item.price).toFixed(2));
+      totalSyncedValue += mktVal;
+
+      if (item.type === 'STOCK') {
+        stocksImported++;
+        const resolved = resolveIsinToTicker(item.isin || '', item.name);
+        await prisma.stockHolding.create({
+          data: {
+            portfolioId,
+            ticker: item.tickerOrScheme || resolved.ticker,
+            companyName: item.name || resolved.name,
+            exchange: 'NSE',
+            shares: item.quantity,
+            averageCostPerShare: item.price,
+            currentPrice: item.price,
+            currency: 'INR'
+          }
+        });
+        holdingsSummary.push({
+          name: item.name,
+          tickerOrScheme: item.tickerOrScheme || resolved.ticker,
+          quantity: item.quantity,
+          price: item.price,
+          marketValue: mktVal,
+          type: 'STOCK'
+        });
+      } else {
+        mutualFundsImported++;
+        const amfi = item.isin ? await marketDataService.getMutualFundByCode(item.isin) : null;
+        await prisma.mutualFundHolding.create({
+          data: {
+            portfolioId,
+            schemeCode: item.isin || 'INF_INDMONEY',
+            fundName: amfi?.schemeName || item.name,
+            fundFamily: amfi?.fundFamily || 'Mutual Fund',
+            fundType: 'Equity',
+            units: item.quantity,
+            averageNav: item.price,
+            currentNav: item.price,
+            currency: 'INR'
+          }
+        });
+        holdingsSummary.push({
+          name: item.name,
+          tickerOrScheme: item.isin || item.tickerOrScheme || 'MF',
+          quantity: item.quantity,
+          price: item.price,
+          marketValue: mktVal,
+          type: 'MUTUAL_FUND'
+        });
+      }
+    }
+
+    return {
+      broker: 'IND_MONEY',
+      stocksImported,
+      mutualFundsImported,
+      totalSyncedValue,
+      holdings: holdingsSummary
+    };
+  }
 }
 
 export const brokerSyncService = new BrokerSyncService();
+

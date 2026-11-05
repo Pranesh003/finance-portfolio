@@ -326,6 +326,11 @@ export class FinanceApiClient {
       this.request<any>('/api/v1/investments/brokers/mf-central/sync', {
         method: 'POST',
         body: JSON.stringify(payload)
+      }),
+    syncIndMoney: (payload: { rawText?: string; jsonPayload?: string; isDemo?: boolean }) =>
+      this.request<any>('/api/v1/investments/brokers/indmoney/sync', {
+        method: 'POST',
+        body: JSON.stringify(payload)
       })
   };
 
